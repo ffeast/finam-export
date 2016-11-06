@@ -30,6 +30,8 @@ class Market(IntEnum):
 
     """
     Markets mapped to ids used by finam.ru export
+
+    List is imcomplete extend it when needed
     """
 
     BONDS = 2
@@ -44,7 +46,6 @@ class Market(IntEnum):
 
 class Period(IntEnum):
 
-    # TODO: < daily data support
     TICKS = 1
     MINUTES1 = 2
     MINUTES5 = 3

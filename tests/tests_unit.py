@@ -21,7 +21,7 @@ from . import fixtures, SBER_ID, MICEX_ID, SBER_CODE, MICEX_CODE
 class MockedMetaMixin(object):
 
     """
-    Mixin to have prepared mocks for all methods at once
+    Mixin to have prepared ExporterMeta._fetch mocks for all methods at once
     """
 
     def setup(self):
@@ -69,7 +69,7 @@ class TestExporterMeta(MockedMetaMixin):
         got = testee.lookup(market=Market.SHARES)
         assert set(got['market']) == {Market.SHARES}
 
-        # # by markets
+        # by markets
         got = testee.lookup(market=[Market.SHARES, Market.BONDS])
         assert set(got['market']) == {Market.SHARES, Market.BONDS}
 
@@ -112,6 +112,10 @@ class TestExporterMeta(MockedMetaMixin):
 
 
 class MockedExporterMixin(object):
+
+    """
+    Mixin to have prepared Exporter._fetch mocks for all methods at once
+    """
 
     def setup(self):
         super(MockedExporterMixin, self).setup()
@@ -164,7 +168,7 @@ class TestExporter(MockedExporterMixin, MockedMetaMixin):
 
     @mock.patch('finam.export.pd.read_csv', return_value=pd.DataFrame())
     def test_remote_calls(self, read_csv_mock):
-        # any valid data would do in this test
+        # any valid data would do in this mock
         self.mock_exporter.return_value = fixtures.data_sber_daily
         url_pattern = 'http://export.finam.ru/table.csv?sep=3&at=1&e=.csv&d=d&f=table&dtf=1&MSOR=0&tmf=3&mstimever=1&mstime=on&sep2=1&em=3&code=SBER&cn=SBER&df=27&yf=2016&dt=27&datf={datf}&yt=2016&market=1&mf=9&mt=9&p={period}' # noqa
         start_date = datetime.date(2016, 10, 27)
