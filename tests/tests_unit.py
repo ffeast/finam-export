@@ -45,7 +45,7 @@ class TestExporterMeta(MockedMetaMixin):
         assert len(got) > len(got['market'].unique())
 
         # simple test for a well-known company
-        sber = got[(got['code'] == 'SBER') & (got['market'] == Market.SHARES)]
+        sber = got[(got['code'] == SBER_CODE) & (got['market'] == Market.SHARES)]
         assert sber['name'].values[0] == u'Сбербанк'
         assert len(sber) == 1
 
