@@ -348,7 +348,7 @@ class Exporter(object):
         }
 
         url = self.__build_url(params)
-        # deliberatly not using pd.read_csv's ability to fetch
+        # deliberately not using pd.read_csv's ability to fetch
         # urls to fully control what's happening
         data_cp1251 = self._fetch(url)
         data = self.__decode_data(data_cp1251)

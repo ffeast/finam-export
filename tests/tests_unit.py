@@ -52,11 +52,6 @@ class TestExporterMeta(MockedMetaMixin):
         assert sber['name'].values[0] == u'Сбербанк'
         assert len(sber) == 1
 
-    def test_malformed(self):
-        self.mock_meta.return_value = fixtures.meta_malformed__split
-        with assert_raises(FinamParsingError):
-            ExporterMeta(lazy=False)
-
     def test_malformed_or_blank(self):
         for fixture in (fixtures.meta_malformed__split,
                         fixtures.meta_blank__split):
@@ -136,9 +131,6 @@ class TestExporter(MockedExporterMixin, MockedMetaMixin):
         super(TestExporter, self).setup()
         self.mock_meta.return_value = fixtures.meta_valid__split
         self.exporter = Exporter()
-
-    def teardown(self):
-        super(TestExporter, self).teardown()
 
     def test_results_except_ticks(self):
         for period in (Period.DAILY, Period.MINUTES30, Period.MONTHLY):
