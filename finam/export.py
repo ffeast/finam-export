@@ -4,7 +4,7 @@ import logging
 import operator
 import collections
 from enum import IntEnum
-from cStringIO import StringIO
+from io import StringIO
 
 try:
     from urllib import urlopen, urlencode
@@ -14,6 +14,8 @@ except ImportError:
 
 import pandas as pd
 from pandas.parser import CParserError
+
+from finam.utils import is_container, smart_encode, smart_decode
 
 __all__ = ['Market',
            'Period',
@@ -88,7 +90,6 @@ class FinamTooLongPeriodError(FinamExportError):
 class ExporterMeta(object):
 
     FINAM_DICT_URL = 'http://www.finam.ru/cache/icharts/icharts.js'
-    FINAM_CHARSET = 'cp1251'
     FINAM_CATEGORIES = -1
 
     def __init__(self, lazy=True):
@@ -162,12 +163,9 @@ class ExporterMeta(object):
         """
         Converts finam's charset to utf8
         """
-        logger.info('Decoding response from {}'.format(self.FINAM_CHARSET))
+        logger.info('Decoding response')
         try:
-            return [line.decode(self.FINAM_CHARSET) for line in data]
-        except LookupError:
-            raise FinamExportError('No charset "{}" available'
-                                   .format(self.FINAM_CHARSET))
+            return smart_decode(data)
         except UnicodeDecodeError as e:
             raise FinamExportError('Unable to decode dictionary content: {}'
                                    .format(e.message))
@@ -179,9 +177,9 @@ class ExporterMeta(object):
         if self._meta is not None:
             return
 
-        rawdata = self._fetch()
-        decoded = self.__decode_data(rawdata)
-        self._meta = self.__parse(decoded)
+        data_cp1251 = self._fetch()
+        data = self.__decode_data(data_cp1251)
+        self._meta = self.__parse(data)
 
     @property
     def meta(self):
@@ -194,8 +192,7 @@ class ExporterMeta(object):
 
         The original dataframe is left intact
         """
-        if (not isinstance(val, collections.Container)
-                or isinstance(val, basestring)):
+        if not is_container(val):
             val = [val]
 
         if comparator == LookupComparator.EQUALS:
@@ -214,8 +211,9 @@ class ExporterMeta(object):
         return expr
 
     def __combine_filters(self, filters, op):
-        result = filters[0]
-        for filter_ in filters[1:]:
+        itr = iter(filters)
+        result = next(itr)
+        for filter_ in itr:
             result = op(result, filter_)
         return result
 
@@ -285,12 +283,23 @@ class Exporter(object):
         return url
 
     def __do_sanity_checks(self, data):
-        if self.ERROR_TOO_MUCH_WANTED.encode('cp1251') in data:
+        if self.ERROR_TOO_MUCH_WANTED in data:
             raise FinamTooLongPeriodError
 
         if not all(c in data for c in '<>;'):
             raise FinamParsingError('Returned data doesnt seem like '
                                     'a valid csv dataset')
+
+    def __decode_data(self, data):
+        """
+        Converts finam's charset to utf8
+        """
+        logger.info('Decoding response')
+        try:
+            return smart_decode(data)
+        except UnicodeDecodeError as e:
+            raise FinamExportError('Unable to decode content: {}'
+                                   .format(e.message))
 
     def _fetch(self, url):
         logger.info('Loading data from {}'.format(url))
@@ -336,13 +345,14 @@ class Exporter(object):
             'code': code,
             # I would guess this param denotes 'data format'
             # that differs for ticks only
-            'datf': 6 if period == period.TICKS.value else 5
+            'datf': 6 if period == Period.TICKS.value else 5
         }
 
         url = self.__build_url(params)
         # deliberatly not using pd.read_csv's ability to fetch
         # urls to fully control what's happening
-        data = self._fetch(url)
+        data_cp1251 = self._fetch(url)
+        data = self.__decode_data(data_cp1251)
         self.__do_sanity_checks(data)
         if period == Period.TICKS:
             date_cols = [2, 3]

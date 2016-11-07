@@ -5,3 +5,4 @@ enum34
 # dev
 nose
 mock
+urltools==0.3.2

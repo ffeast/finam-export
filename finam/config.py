@@ -1,0 +1,1 @@
+FINAM_CHARSET = 'cp1251'

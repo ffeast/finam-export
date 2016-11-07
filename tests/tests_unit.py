@@ -1,6 +1,7 @@
 # coding: utf-8
 import operator
 import datetime
+from io import open
 
 import mock
 import pandas as pd
@@ -14,8 +15,10 @@ from finam.export import (ExporterMeta,
                           FinamParsingError,
                           FinamTooLongPeriodError,
                           FinamObjectNotFoundError)
+from finam.config import FINAM_CHARSET
 
-from . import fixtures, SBER_ID, MICEX_ID, SBER_CODE, MICEX_CODE
+from . import (fixtures, startswith_compat, urls_equal,
+               SBER_ID, MICEX_ID, SBER_CODE, MICEX_CODE)
 
 
 class MockedMetaMixin(object):
@@ -93,7 +96,7 @@ class TestExporterMeta(MockedMetaMixin):
                                    LookupComparator.STARTSWITH),
                                   (operator.eq,
                                    operator.contains,
-                                   unicode.startswith)):
+                                   startswith_compat)):
 
             # single code
             got = testee.lookup(code=SBER_CODE, code_comparator=comparator)
@@ -145,6 +148,7 @@ class TestExporter(MockedExporterMixin, MockedMetaMixin):
             assert got.index[1] - got.index[0] > datetime.timedelta(0)
             assert got.columns.equals(pd.Index(['<OPEN>', '<HIGH>', '<LOW>',
                                                 '<CLOSE>', '<VOL>']))
+            assert got.sort_index().equals(got)
 
     def test_results_ticks(self):
         self.mock_exporter.return_value = fixtures.data_sber_ticks
@@ -153,16 +157,18 @@ class TestExporter(MockedExporterMixin, MockedMetaMixin):
         assert got.index[1] - got.index[0] == datetime.timedelta(0)
         assert got.columns.equals(
             pd.Index(['<TICKER>', '<PER>', '<LAST>', '<VOL>']))
+        # we need a stable sorting algorithm here
+        assert got.sort_index(kind='mergesort').equals(got)
 
     def test_period_too_long(self):
         self.mock_exporter.return_value = ('some noise\n\n'
                                            + Exporter.ERROR_TOO_MUCH_WANTED
-                                           + ' more noise\n').encode('cp1251')
+                                           + ' noise\n').encode(FINAM_CHARSET)
         with assert_raises(FinamTooLongPeriodError):
             self.exporter.download(SBER_ID, Market.SHARES)
 
     def test_sanity_checks(self):
-        self.mock_exporter.return_value = 'some abstract\n\nstring'
+        self.mock_exporter.return_value = 'any\nstring'.encode(FINAM_CHARSET)
         with assert_raises(FinamParsingError):
             self.exporter.download(SBER_ID, Market.SHARES)
 
@@ -174,10 +180,10 @@ class TestExporter(MockedExporterMixin, MockedMetaMixin):
         start_date = datetime.date(2016, 10, 27)
         end_date = datetime.date(2016, 10, 27)
         for period in Period:
-            datf = period == period.TICKS and 6 or 5
+            datf = period == Period.TICKS and 6 or 5
             expected = url_pattern.format(period=period.value, datf=datf)
             self.exporter.download(SBER_ID, Market.SHARES,
                                    start_date, end_date, period)
             self.mock_exporter.assert_called_once()
-            assert expected in self.mock_exporter.call_args[0]
+            assert urls_equal(expected, self.mock_exporter.call_args[0][0])
             self.mock_exporter.reset_mock()
