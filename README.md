@@ -1,16 +1,16 @@
 # finam-export
 Python client library to download data from finam.ru
 
-# Capabilities
+## Capabilities
 * Contracts lookup by market categories, id, code, name or their combinations using a rich set of mathching options
 * Download data of any timeframe available on finam.ru ranging from ticks to monthly resolution
 
-# Samples provided
+## Samples provided
 * `samples/listing.py` - simply lists some contracts from every supported market
 * `samples/download.py` - download some data and prints it out
 * `samples/lookups.py` - shows how you can leverage lookup capabilities
 
-# Show me something working!
+## Show me something working!
 Here's the output
 ```
 PYTHONPATH=. python samples/download.py
@@ -73,17 +73,17 @@ If you have it installed then just
 python samples/listing.py
 ```
 
-# Technical details
+## Technical details
 * Uses pandas inside, all data returned is pandas DataFrames
 * Tested with python2.7 and python3.4
 * Complete tests coverage
 * Detailed logging
 
-# Development
+## Development
 * clone the repo
 * `pip install -r ./requirements.txt`
 * go ahead and enhance it!
 
-# TODO:
+## TODO:
 * Automatic requests splitting if an overly long time period is requested
 * Additional tools like current futures contracts, filtering and the like
