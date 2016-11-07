@@ -1,5 +1,6 @@
-from finam.export import Exporter, Market
+import logging
 
+from finam.export import Exporter, Market
 
 """
 Simply lists available markets and some samples out of them
@@ -9,6 +10,7 @@ SAMPLE_SIZE = 5
 
 
 def main():
+    logging.basicConfig(level=logging.DEBUG)
     exporter = Exporter()
     for market in Market:
         print('{0.name:*^25}'.format(market))

@@ -36,6 +36,7 @@ class Market(IntEnum):
     """
 
     BONDS = 2
+    COMMODITIES = 24
     CURRENCIES = 45
     ETF = 515
     FUTURES = 14  # non-expired futures
