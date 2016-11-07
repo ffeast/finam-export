@@ -20,4 +20,3 @@ def smart_decode(val, charset=FINAM_CHARSET):
     if is_container(val):
         return [v.decode(charset) for v in val]
     return val.decode(charset)
-

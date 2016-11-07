@@ -2,7 +2,6 @@
 import datetime
 import logging
 import operator
-import collections
 from enum import IntEnum
 from io import StringIO
 
@@ -15,7 +14,7 @@ except ImportError:
 import pandas as pd
 from pandas.parser import CParserError
 
-from finam.utils import is_container, smart_encode, smart_decode
+from finam.utils import is_container, smart_decode
 
 __all__ = ['Market',
            'Period',

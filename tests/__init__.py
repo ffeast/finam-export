@@ -5,7 +5,7 @@ import os.path
 import urltools
 
 from finam.config import FINAM_CHARSET
-from finam.utils import smart_encode, smart_decode
+from finam.utils import smart_encode
 
 
 SBER_ID = 3
@@ -51,6 +51,6 @@ fixtures = FixtureRegistry()
 # 2.x <-> 3.x compatibility
 startswith_compat = type(u'').startswith
 
+
 def urls_equal(url1, url2):
     return urltools.normalize(url1) == urltools.normalize(url2)
-
