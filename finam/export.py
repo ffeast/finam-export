@@ -216,7 +216,8 @@ class ExporterMeta(object):
             result = op(result, filter_)
         return result
 
-    def lookup(self, id_=None, code=None, market=None,
+    def lookup(self, id_=None, code=None, name=None, market=None,
+               name_comparator=LookupComparator.CONTAINS,
                code_comparator=LookupComparator.EQUALS):
         """
         Looks up contracts matching specified combinations of requirements
@@ -225,8 +226,9 @@ class ExporterMeta(object):
         Note that the same id can have multiple matches as an entry
         may appear in different markets
         """
-        if not any((id_, code, market)):
-            raise ValueError('Either id or code or market must be specified')
+        if not any((id_, code, name, market)):
+            raise ValueError('Either id or code or name or market'
+                             ' must be specified')
 
         self.__maybe_load()
         filters = []
@@ -234,6 +236,7 @@ class ExporterMeta(object):
         # applying filters
         filter_groups = (('id', id_, LookupComparator.EQUALS),
                          ('code', code, code_comparator),
+                         ('name', name, name_comparator),
                          ('market', market, LookupComparator.EQUALS))
 
         for col, val, comparator in filter_groups:

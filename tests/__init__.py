@@ -1,5 +1,7 @@
+# coding: utf-8
 from glob import glob
 from io import open
+from collections import namedtuple
 import os.path
 
 import urltools
@@ -7,11 +9,10 @@ import urltools
 from finam.config import FINAM_CHARSET
 from finam.utils import smart_encode
 
+Contract = namedtuple('Contract', ('id', 'code', 'name'))
+SBER = Contract(3, 'SBER', u'Сбербанк')
+MICEX = Contract(13851, 'MICEX', u'ММВБ')
 
-SBER_ID = 3
-SBER_CODE = 'SBER'
-MICEX_ID = 13851
-MICEX_CODE = 'MICEX'
 # 10:00 - 18:40
 SHARES_SESSION_MINUTES = 60 * 8 + 40
 

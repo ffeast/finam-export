@@ -2,7 +2,7 @@ from datetime import timedelta, datetime
 
 from finam.export import Exporter, Market, Period
 
-from . import SBER_ID, SHARES_SESSION_MINUTES
+from . import SBER, SHARES_SESSION_MINUTES
 
 
 class TestIntegration(object):
@@ -12,14 +12,14 @@ class TestIntegration(object):
         start_date = datetime(2015, 1, 1)
         end_date = datetime(2016, 1, 1)
 
-        got_daily = exporter.download(SBER_ID, Market.SHARES,
+        got_daily = exporter.download(SBER.id, Market.SHARES,
                                       start_date=start_date,
                                       end_date=end_date,
                                       period=Period.DAILY)
         daily_count = len(got_daily)
         assert daily_count > 0
 
-        got_minutes = exporter.download(SBER_ID, Market.SHARES,
+        got_minutes = exporter.download(SBER.id, Market.SHARES,
                                         start_date=start_date,
                                         end_date=end_date,
                                         period=Period.MINUTES30)
@@ -35,7 +35,7 @@ class TestIntegration(object):
     def test_ticks(self):
         exporter = Exporter()
         ticks_date = datetime(2016, 10, 27)
-        got = exporter.download(SBER_ID, Market.SHARES,
+        got = exporter.download(SBER.id, Market.SHARES,
                                 start_date=ticks_date,
                                 end_date=ticks_date,
                                 period=Period.TICKS)

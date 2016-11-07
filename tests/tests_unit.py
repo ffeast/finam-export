@@ -16,8 +16,7 @@ from finam.export import (ExporterMeta,
                           FinamObjectNotFoundError)
 from finam.config import FINAM_CHARSET
 
-from . import (fixtures, startswith_compat, urls_equal,
-               SBER_ID, MICEX_ID, SBER_CODE, MICEX_CODE)
+from . import fixtures, startswith_compat, urls_equal, SBER, MICEX
 
 
 class MockedMetaMixin(object):
@@ -47,7 +46,7 @@ class TestExporterMeta(MockedMetaMixin):
         assert len(got) > len(got['market'].unique())
 
         # simple test for a well-known company
-        sber = got[(got['code'] == SBER_CODE)
+        sber = got[(got['code'] == SBER.code)
                    & (got['market'] == Market.SHARES)]
         assert sber['name'].values[0] == u'Сбербанк'
         assert len(sber) == 1
@@ -72,38 +71,47 @@ class TestExporterMeta(MockedMetaMixin):
         assert set(got['market']) == {Market.SHARES, Market.BONDS}
 
         # by id
-        got = testee.lookup(id_=SBER_ID)
-        assert set(got.index) == {SBER_ID}
+        got = testee.lookup(id_=SBER.id)
+        assert set(got.index) == {SBER.id}
 
         # by ids
-        got = testee.lookup(id_=(SBER_ID, MICEX_ID))
-        assert set(got.index) == {SBER_ID, MICEX_ID}
+        got = testee.lookup(id_=(SBER.id, MICEX.id))
+        assert set(got.index) == {SBER.id, MICEX.id}
 
         # missing id
         MISSING_ID = testee.meta.index.values.max() + 1
         with assert_raises(FinamObjectNotFoundError):
             testee.lookup(id_=MISSING_ID)
 
-        # for various kinds of code matching
-        codes = SBER_CODE, MICEX_CODE
-        for comparator, op in zip((LookupComparator.EQUALS,
-                                   LookupComparator.CONTAINS,
-                                   LookupComparator.STARTSWITH),
-                                  (operator.eq,
-                                   operator.contains,
-                                   startswith_compat)):
+        # for various kinds of code and name matching
+        for field in ('name', 'code'):
+            field_values = getattr(SBER, field), getattr(MICEX, field)
+            field_value = field_values[0]
+            for comparator, op in zip((LookupComparator.EQUALS,
+                                       LookupComparator.CONTAINS,
+                                       LookupComparator.STARTSWITH),
+                                      (operator.eq,
+                                       operator.contains,
+                                       startswith_compat)):
 
-            # single code
-            got = testee.lookup(code=SBER_CODE, code_comparator=comparator)
-            assert all(op(val, SBER_CODE) for val in set(got['code']))
+                # single value
+                got = testee.lookup(**{
+                    field: field_value, field + '_comparator': comparator
+                })
+                assert all(op(val, field_value) for val in set(got[field]))
 
-            # multiple codes
-            got = testee.lookup(code=codes)
-            assert all(any(op(val, code) for code in codes)
-                       for val in set(got['code']))
+                # multiple values
+                got = testee.lookup(**{
+                    field: field_values,
+                    field + '_comparator': comparator
+                })
+                for got_value in set(got[field]):
+                    # matches any of the queries arguments
+                    assert any(op(got_value, asked_value)
+                               for asked_value in field_values)
 
-        # by market and codes
-        codes = SBER_CODE, 'GMKN'
+        # mixed lookup by market and codes
+        codes = SBER.code, 'GMKN'
         got = testee.lookup(market=Market.SHARES, code=codes)
         assert len(got) == len(codes)
         assert set(got['market']) == {Market.SHARES}
@@ -136,7 +144,7 @@ class TestExporter(MockedExporterMixin, MockedMetaMixin):
         for period in (Period.DAILY, Period.MINUTES30, Period.MONTHLY):
             fixture = 'data_sber_{}'.format(period.name.lower())
             self.mock_exporter.return_value = getattr(fixtures, fixture)
-            got = self.exporter.download(SBER_ID, Market.SHARES, period=period)
+            got = self.exporter.download(SBER.id, Market.SHARES, period=period)
             assert got.index[1] - got.index[0] > datetime.timedelta(0)
             assert got.columns.equals(pd.Index(['<OPEN>', '<HIGH>', '<LOW>',
                                                 '<CLOSE>', '<VOL>']))
@@ -144,7 +152,7 @@ class TestExporter(MockedExporterMixin, MockedMetaMixin):
 
     def test_results_ticks(self):
         self.mock_exporter.return_value = fixtures.data_sber_ticks
-        got = self.exporter.download(SBER_ID, Market.SHARES,
+        got = self.exporter.download(SBER.id, Market.SHARES,
                                      period=Period.TICKS)
         assert got.index[1] - got.index[0] == datetime.timedelta(0)
         assert got.columns.equals(
@@ -157,12 +165,12 @@ class TestExporter(MockedExporterMixin, MockedMetaMixin):
                                            + Exporter.ERROR_TOO_MUCH_WANTED
                                            + ' noise\n').encode(FINAM_CHARSET)
         with assert_raises(FinamTooLongPeriodError):
-            self.exporter.download(SBER_ID, Market.SHARES)
+            self.exporter.download(SBER.id, Market.SHARES)
 
     def test_sanity_checks(self):
         self.mock_exporter.return_value = 'any\nstring'.encode(FINAM_CHARSET)
         with assert_raises(FinamParsingError):
-            self.exporter.download(SBER_ID, Market.SHARES)
+            self.exporter.download(SBER.id, Market.SHARES)
 
     @mock.patch('finam.export.pd.read_csv', return_value=pd.DataFrame())
     def test_remote_calls(self, read_csv_mock):
@@ -174,7 +182,7 @@ class TestExporter(MockedExporterMixin, MockedMetaMixin):
         for period in Period:
             datf = period == Period.TICKS and 6 or 5
             expected = url_pattern.format(period=period.value, datf=datf)
-            self.exporter.download(SBER_ID, Market.SHARES,
+            self.exporter.download(SBER.id, Market.SHARES,
                                    start_date, end_date, period)
             self.mock_exporter.assert_called_once()
             assert urls_equal(expected, self.mock_exporter.call_args[0][0])
