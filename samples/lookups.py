@@ -1,9 +1,12 @@
 # coding: utf-8
+import logging
+
 from finam.export import Exporter, Market, LookupComparator
 
 """
 This sample script shows off lookup capabilities
 """
+
 
 def main():
     exporter = Exporter()
