@@ -89,7 +89,7 @@ class FinamTooLongPeriodError(FinamExportError):
 
 class ExporterMeta(object):
 
-    FINAM_DICT_URL = 'http://www.finam.ru/cache/icharts/icharts.js'
+    FINAM_DICT_URL = 'https://www.finam.ru/cache/icharts/icharts.js'
     FINAM_CATEGORIES = -1
 
     def __init__(self, lazy=True):
@@ -157,7 +157,7 @@ class ExporterMeta(object):
             return urlopen(self.FINAM_DICT_URL).readlines()
         except IOError as e:
             raise FinamDownloadError('Unable to load contracts dictionary: {}'
-                                     .format(e.message))
+                                     .format(e))
 
     def __decode_data(self, data):
         """
