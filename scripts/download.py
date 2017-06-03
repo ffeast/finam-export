@@ -100,9 +100,9 @@ def main(contracts, market, timeframe, destdir, lineterm, startdate, enddate):
                                      timeframe=Timeframe[timeframe],
                                      market=Market(contract.market))
         except FinamTooLongTimeframeError:
-            logger.exception('The request period {}-{}  is too long '
-                             'for the {} timeframe. Try to shorten the period'
-                             .format(startdate, enddate, timeframe))
+            raise RuntimeError('The requested period {} - {} is too long'
+                               ' for the {} timeframe. Try to shorten the period'
+                               .format(startdate, enddate, timeframe))
         destpath = os.path.join(destdir, '{}-{}.csv'
                                 .format(contract.code, timeframe))
         data.to_csv(destpath, line_terminator=lineterm)
