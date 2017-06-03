@@ -47,6 +47,7 @@ class FixtureRegistry(object):
     def __getattr__(self, key):
         return self._fixtures[key]
 
+
 fixtures = FixtureRegistry()
 
 # 2.x <-> 3.x compatibility

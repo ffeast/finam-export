@@ -17,10 +17,10 @@ from pandas.parser import CParserError
 from finam.utils import is_container, smart_decode
 
 __all__ = ['Market',
-           'Period',
+           'Timeframe',
            'FinamDownloadError',
            'FinamParsingError',
-           'FinamTooLongPeriodError',
+           'FinamTooLongTimeframeError',
            'FinamObjectNotFoundError',
            'Exporter']
 
@@ -38,15 +38,17 @@ class Market(IntEnum):
     BONDS = 2
     COMMODITIES = 24
     CURRENCIES = 45
-    ETF = 515
     FUTURES = 14  # non-expired futures
     FUTURES_ARCHIVE = 17  # expired futures
     INDEXES = 6
     SHARES = 1
     USA = 25
+    FUTURES_USA = 7
+    ETF = 28
+    ETF_MOEX = 515
 
 
-class Period(IntEnum):
+class Timeframe(IntEnum):
 
     TICKS = 1
     MINUTES1 = 2
@@ -83,7 +85,7 @@ class FinamObjectNotFoundError(FinamExportError):
     pass
 
 
-class FinamTooLongPeriodError(FinamExportError):
+class FinamTooLongTimeframeError(FinamExportError):
     pass
 
 
@@ -287,11 +289,12 @@ class Exporter(object):
 
     def __do_sanity_checks(self, data):
         if self.ERROR_TOO_MUCH_WANTED in data:
-            raise FinamTooLongPeriodError
+            raise FinamTooLongTimeframeError
 
         if not all(c in data for c in '<>;'):
             raise FinamParsingError('Returned data doesnt seem like '
-                                    'a valid csv dataset')
+                                    'a valid csv dataset: {}'
+                                    .format(data))
 
     def __decode_data(self, data):
         """
@@ -320,7 +323,7 @@ class Exporter(object):
                  market,
                  start_date=datetime.date(2007, 1, 1),
                  end_date=None,
-                 period=Period.DAILY):
+                 timeframe=Timeframe.DAILY):
 
         items = self._meta.lookup(id_=id_, market=market)
         # i.e. for markets 91, 519, 2
@@ -335,7 +338,7 @@ class Exporter(object):
             end_date = datetime.date.today()
 
         params = {
-            'p': period.value,
+            'p': timeframe.value,
             'em': id_,
             'market': market.value,
             'df': start_date.day,
@@ -348,7 +351,7 @@ class Exporter(object):
             'code': code,
             # I would guess this param denotes 'data format'
             # that differs for ticks only
-            'datf': 6 if period == Period.TICKS.value else 5
+            'datf': 6 if timeframe == Timeframe.TICKS.value else 5
         }
 
         url = self.__build_url(params)
@@ -357,7 +360,7 @@ class Exporter(object):
         data_cp1251 = self._fetch(url)
         data = self.__decode_data(data_cp1251)
         self.__do_sanity_checks(data)
-        if period == Period.TICKS:
+        if timeframe == Timeframe.TICKS:
             date_cols = [2, 3]
         else:
             date_cols = [0, 1]

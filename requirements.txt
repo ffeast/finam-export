@@ -2,7 +2,9 @@ pandas==0.13.1
 requests==2.2.1
 enum34
 click==6.7
+click-datetime==0.2
 # dev
 nose
 mock
+coverage
 urltools==0.3.2

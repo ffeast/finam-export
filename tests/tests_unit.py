@@ -9,10 +9,10 @@ from nose.tools import assert_raises
 from finam.export import (ExporterMeta,
                           Exporter,
                           Market,
-                          Period,
+                          Timeframe,
                           LookupComparator,
                           FinamParsingError,
-                          FinamTooLongPeriodError,
+                          FinamTooLongTimeframeError,
                           FinamObjectNotFoundError)
 from finam.config import FINAM_CHARSET
 
@@ -141,10 +141,13 @@ class TestExporter(MockedExporterMixin, MockedMetaMixin):
         self.exporter = Exporter()
 
     def test_results_except_ticks(self):
-        for period in (Period.DAILY, Period.MINUTES30, Period.MONTHLY):
-            fixture = 'data_sber_{}'.format(period.name.lower())
+        for timeframe in (Timeframe.DAILY,
+                          Timeframe.MINUTES30,
+                          Timeframe.MONTHLY):
+            fixture = 'data_sber_{}'.format(timeframe.name.lower())
             self.mock_exporter.return_value = getattr(fixtures, fixture)
-            got = self.exporter.download(SBER.id, Market.SHARES, period=period)
+            got = self.exporter.download(SBER.id, Market.SHARES,
+                                         timeframe=timeframe)
             assert got.index[1] - got.index[0] > datetime.timedelta(0)
             assert got.columns.equals(pd.Index(['<OPEN>', '<HIGH>', '<LOW>',
                                                 '<CLOSE>', '<VOL>']))
@@ -153,18 +156,18 @@ class TestExporter(MockedExporterMixin, MockedMetaMixin):
     def test_results_ticks(self):
         self.mock_exporter.return_value = fixtures.data_sber_ticks
         got = self.exporter.download(SBER.id, Market.SHARES,
-                                     period=Period.TICKS)
+                                     timeframe=Timeframe.TICKS)
         assert got.index[1] - got.index[0] == datetime.timedelta(0)
         assert got.columns.equals(
             pd.Index(['<TICKER>', '<PER>', '<LAST>', '<VOL>']))
         # we need a stable sorting algorithm here
         assert got.sort_index(kind='mergesort').equals(got)
 
-    def test_period_too_long(self):
+    def test_timeframe_too_long(self):
         self.mock_exporter.return_value = ('some noise\n\n'
                                            + Exporter.ERROR_TOO_MUCH_WANTED
                                            + ' noise\n').encode(FINAM_CHARSET)
-        with assert_raises(FinamTooLongPeriodError):
+        with assert_raises(FinamTooLongTimeframeError):
             self.exporter.download(SBER.id, Market.SHARES)
 
     def test_sanity_checks(self):
@@ -176,14 +179,14 @@ class TestExporter(MockedExporterMixin, MockedMetaMixin):
     def test_remote_calls(self, read_csv_mock):
         # any valid data would do in this mock
         self.mock_exporter.return_value = fixtures.data_sber_daily
-        url_pattern = 'http://export.finam.ru/table.csv?sep=3&at=1&e=.csv&d=d&f=table&dtf=1&MSOR=0&tmf=3&mstimever=1&mstime=on&sep2=1&em=3&code=SBER&cn=SBER&df=27&yf=2016&dt=27&datf={datf}&yt=2016&market=1&mf=9&mt=9&p={period}' # noqa
+        url_pattern = 'http://export.finam.ru/table.csv?sep=3&at=1&e=.csv&d=d&f=table&dtf=1&MSOR=0&tmf=3&mstimever=1&mstime=on&sep2=1&em=3&code=SBER&cn=SBER&df=27&yf=2016&dt=27&datf={datf}&yt=2016&market=1&mf=9&mt=9&p={timeframe}' # noqa
         start_date = datetime.date(2016, 10, 27)
         end_date = datetime.date(2016, 10, 27)
-        for period in Period:
-            datf = period == Period.TICKS and 6 or 5
-            expected = url_pattern.format(period=period.value, datf=datf)
+        for timeframe in Timeframe:
+            datf = timeframe == Timeframe.TICKS and 6 or 5
+            expected = url_pattern.format(timeframe=timeframe.value, datf=datf)
             self.exporter.download(SBER.id, Market.SHARES,
-                                   start_date, end_date, period)
+                                   start_date, end_date, timeframe)
             self.mock_exporter.assert_called_once()
             assert urls_equal(expected, self.mock_exporter.call_args[0][0])
             self.mock_exporter.reset_mock()

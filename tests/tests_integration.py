@@ -1,6 +1,6 @@
 from datetime import timedelta, datetime
 
-from finam.export import Exporter, Market, Period
+from finam.export import Exporter, Market, Timeframe
 
 from . import SBER, SHARES_SESSION_MINUTES
 
@@ -15,14 +15,14 @@ class TestIntegration(object):
         got_daily = exporter.download(SBER.id, Market.SHARES,
                                       start_date=start_date,
                                       end_date=end_date,
-                                      period=Period.DAILY)
+                                      timeframe=Timeframe.DAILY)
         daily_count = len(got_daily)
         assert daily_count > 0
 
         got_minutes = exporter.download(SBER.id, Market.SHARES,
                                         start_date=start_date,
                                         end_date=end_date,
-                                        period=Period.MINUTES30)
+                                        timeframe=Timeframe.MINUTES30)
         minutes30_count = len(got_minutes)
         assert minutes30_count > daily_count * SHARES_SESSION_MINUTES / 30
 
@@ -38,7 +38,7 @@ class TestIntegration(object):
         got = exporter.download(SBER.id, Market.SHARES,
                                 start_date=ticks_date,
                                 end_date=ticks_date,
-                                period=Period.TICKS)
+                                timeframe=Timeframe.TICKS)
         assert len(got) > SHARES_SESSION_MINUTES * 60
         assert got.index.min().to_datetime() >= ticks_date
         assert got.index.min().to_datetime() < ticks_date + timedelta(days=1)
