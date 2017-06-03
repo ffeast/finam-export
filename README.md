@@ -7,8 +7,11 @@ Python client library to download data from finam.ru
 
 ## Samples provided
 * `samples/listing.py` - simply lists some contracts from every supported market
-* `samples/download.py` - download some data and prints it out
+* `samples/download.py` - downloads some data and prints it out
 * `samples/lookups.py` - shows how you can leverage lookup capabilities
+
+## Utility scripts
+* `scripts/download.py` - feature-rich standalone script to download finam's data
 
 ## Show me something working!
 Here's the output
