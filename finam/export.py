@@ -24,7 +24,8 @@ __all__ = ['Market',
            'FinamObjectNotFoundError',
            'Exporter']
 
-logger = logging.getLogger()
+
+logger = logging.getLogger(__name__)
 
 
 class Market(IntEnum):
@@ -32,20 +33,21 @@ class Market(IntEnum):
     """
     Markets mapped to ids used by finam.ru export
 
-    List is imcomplete extend it when needed
+    List is incomplete, extend it when needed
     """
 
     BONDS = 2
     COMMODITIES = 24
     CURRENCIES = 45
-    FUTURES = 14  # non-expired futures
-    FUTURES_ARCHIVE = 17  # expired futures
-    INDEXES = 6
-    SHARES = 1
-    USA = 25
-    FUTURES_USA = 7
     ETF = 28
     ETF_MOEX = 515
+    FUTURES = 14  # non-expired futures
+    FUTURES_ARCHIVE = 17  # expired futures
+    FUTURES_USA = 7
+    INDEXES = 6
+    SHARES = 1
+    SPB = 517
+    USA = 25
 
 
 class Timeframe(IntEnum):
@@ -97,9 +99,9 @@ class ExporterMeta(object):
     def __init__(self, lazy=True):
         self._meta = None
         if not lazy:
-            self.__maybe_load()
+            self._maybe_load()
 
-    def __parse_js_assignment(self, line):
+    def _parse_js_assignment(self, line):
         """
         Parses 1-line js assignment used by finam.ru
 
@@ -132,14 +134,14 @@ class ExporterMeta(object):
         # int items
         return items.split(',')
 
-    def __parse(self, data):
+    def _parse(self, data):
         """
         Parses js file used by finam.ru export tool
         """
         cols = ('id', 'name', 'code', 'market')
         parsed = dict()
         for idx, col in enumerate(cols[:len(cols)]):
-            parsed[col] = self.__parse_js_assignment(data[idx])
+            parsed[col] = self._parse_js_assignment(data[idx])
         df = pd.DataFrame(columns=cols, data=parsed)
         df['market'] = df['market'].astype(int)
         # junk data + non-int ids, we don't need it
@@ -161,7 +163,7 @@ class ExporterMeta(object):
             raise FinamDownloadError('Unable to load contracts dictionary: {}'
                                      .format(e))
 
-    def __decode_data(self, data):
+    def _decode_data(self, data):
         """
         Converts finam's charset to utf8
         """
@@ -172,7 +174,7 @@ class ExporterMeta(object):
             raise FinamExportError('Unable to decode dictionary content: {}'
                                    .format(e.message))
 
-    def __maybe_load(self):
+    def _maybe_load(self):
         """
         Downloads and parses finam's metadata if it's not done yet
         """
@@ -180,15 +182,15 @@ class ExporterMeta(object):
             return
 
         data_cp1251 = self._fetch()
-        data = self.__decode_data(data_cp1251)
-        self._meta = self.__parse(data)
+        data = self._decode_data(data_cp1251)
+        self._meta = self._parse(data)
 
     @property
     def meta(self):
         # so that dataframe can't be modified externally
         return self._meta.copy(deep=True)
 
-    def __apply_filter(self, col, val, comparator):
+    def _apply_filter(self, col, val, comparator):
         """
         Builds a dataframe matching original dataframe with conditions passed
 
@@ -208,11 +210,11 @@ class ExporterMeta(object):
                 op = 'startswith'
             else:
                 op = 'contains'
-            expr = self.__combine_filters(
+            expr = self._combine_filters(
                 map(getattr(self._meta[col].str, op), val), operator.or_)
         return expr
 
-    def __combine_filters(self, filters, op):
+    def _combine_filters(self, filters, op):
         itr = iter(filters)
         result = next(itr)
         for filter_ in itr:
@@ -233,7 +235,7 @@ class ExporterMeta(object):
             raise ValueError('Either id or code or name or market'
                              ' must be specified')
 
-        self.__maybe_load()
+        self._maybe_load()
         filters = []
 
         # applying filters
@@ -244,9 +246,9 @@ class ExporterMeta(object):
 
         for col, val, comparator in filter_groups:
             if val is not None:
-                filters.append(self.__apply_filter(col, val, comparator))
+                filters.append(self._apply_filter(col, val, comparator))
 
-        combined_filter = self.__combine_filters(filters, operator.and_)
+        combined_filter = self._combine_filters(filters, operator.and_)
         res = self._meta[combined_filter]
         if len(res) == 0:
             raise FinamObjectNotFoundError
@@ -280,14 +282,14 @@ class Exporter(object):
         else:
             self._export_host = self.DEFAULT_EXPORT_HOST
 
-    def __build_url(self, params):
+    def _build_url(self, params):
         url = ('http://{}/table.csv?{}&{}'
                .format(self._export_host,
                        urlencode(self.IMMUTABLE_PARAMS),
                        urlencode(params)))
         return url
 
-    def __do_sanity_checks(self, data):
+    def _do_sanity_checks(self, data):
         if self.ERROR_TOO_MUCH_WANTED in data:
             raise FinamTooLongTimeframeError
 
@@ -296,7 +298,7 @@ class Exporter(object):
                                     'a valid csv dataset: {}'
                                     .format(data))
 
-    def __decode_data(self, data):
+    def _decode_data(self, data):
         """
         Converts finam's charset to utf8
         """
@@ -354,12 +356,12 @@ class Exporter(object):
             'datf': 6 if timeframe == Timeframe.TICKS.value else 5
         }
 
-        url = self.__build_url(params)
+        url = self._build_url(params)
         # deliberately not using pd.read_csv's ability to fetch
         # urls to fully control what's happening
         data_cp1251 = self._fetch(url)
-        data = self.__decode_data(data_cp1251)
-        self.__do_sanity_checks(data)
+        data = self._decode_data(data_cp1251)
+        self._do_sanity_checks(data)
         if timeframe == Timeframe.TICKS:
             date_cols = [2, 3]
         else:
