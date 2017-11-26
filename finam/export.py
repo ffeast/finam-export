@@ -19,7 +19,6 @@ from finam.utils import is_container, smart_decode
 __all__ = ['Market',
            'Timeframe',
            'FinamDownloadError',
-           'FinamParsingError',
            'FinamTooLongTimeframeError',
            'FinamObjectNotFoundError',
            'Exporter']
@@ -79,10 +78,6 @@ class FinamDownloadError(FinamExportError):
     pass
 
 
-class FinamParsingError(FinamExportError):
-    pass
-
-
 class FinamObjectNotFoundError(FinamExportError):
     pass
 
@@ -119,7 +114,7 @@ class ExporterMeta(object):
         end_idx = line.find(end_char)
         if (start_idx == -1 or
                 end_idx == -1):
-            raise FinamParsingError('Unable to parse line: {}'.format(line))
+            raise FinamDownloadError('Unable to parse line: {}'.format(line))
         items = line[start_idx + 1:end_idx]
 
         # string items
@@ -294,9 +289,8 @@ class Exporter(object):
             raise FinamTooLongTimeframeError
 
         if not all(c in data for c in '<>;'):
-            raise FinamParsingError('Returned data doesnt seem like '
-                                    'a valid csv dataset: {}'
-                                    .format(data))
+            raise FinamDownloadError('Returned data doesnt seem like '
+                                     'a valid csv dataset: {}'.format(data))
 
     def _decode_data(self, data):
         """
@@ -374,6 +368,6 @@ class Exporter(object):
                              sep=';')
             df.sort_index(inplace=True)
         except CParserError as e:
-            raise FinamParsingError(e.message)
+            raise FinamDownloadError(e.message)
 
         return df

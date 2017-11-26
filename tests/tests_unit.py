@@ -11,7 +11,7 @@ from finam.export import (ExporterMeta,
                           Market,
                           Timeframe,
                           LookupComparator,
-                          FinamParsingError,
+                          FinamDownloadError,
                           FinamTooLongTimeframeError,
                           FinamObjectNotFoundError)
 from finam.config import FINAM_CHARSET
@@ -55,7 +55,7 @@ class TestExporterMeta(MockedMetaMixin):
         for fixture in (fixtures.meta_malformed__split,
                         fixtures.meta_blank__split):
             self.mock_meta.return_value = fixture
-            with assert_raises(FinamParsingError):
+            with assert_raises(FinamDownloadError):
                 ExporterMeta(lazy=False)
 
     def test_lookup(self):
@@ -172,7 +172,7 @@ class TestExporter(MockedExporterMixin, MockedMetaMixin):
 
     def test_sanity_checks(self):
         self.mock_exporter.return_value = 'any\nstring'.encode(FINAM_CHARSET)
-        with assert_raises(FinamParsingError):
+        with assert_raises(FinamDownloadError):
             self.exporter.download(SBER.id, Market.SHARES)
 
     @mock.patch('finam.export.pd.read_csv', return_value=pd.DataFrame())

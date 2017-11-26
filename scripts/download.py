@@ -7,7 +7,10 @@ from functools import partial
 import click
 from click_datetime import Datetime
 
-from finam.export import (Exporter, Timeframe, Market,
+from finam.export import (Exporter,
+                          Timeframe,
+                          Market,
+                          FinamDownloadError,
                           FinamObjectNotFoundError,
                           FinamTooLongTimeframeError)
 
@@ -61,6 +64,11 @@ def _validate_enum(enumClass, ctx, param, value):
               required=True,
               type=click.Path(exists=True, file_okay=False, writable=True,
                               resolve_path=True))
+@click.option('--skiperr',
+              help='Continue if a download error occurs. False by default',
+              required=False,
+              default=True,
+              type=bool)
 @click.option('--lineterm',
               help='Line terminator',
               default='\r\n')
@@ -72,7 +80,8 @@ def _validate_enum(enumClass, ctx, param, value):
               type=Datetime(format='%Y-%m-%d'),
               default=datetime.date.today().strftime('%Y-%m-%d'),
               required=False)
-def main(contracts, market, timeframe, destdir, lineterm, startdate, enddate):
+def main(contracts, market, timeframe, destdir, lineterm,
+         startdate, enddate, skiperr):
     exporter = Exporter()
 
     if all((contracts, market)):
@@ -100,9 +109,15 @@ def main(contracts, market, timeframe, destdir, lineterm, startdate, enddate):
                                      timeframe=Timeframe[timeframe],
                                      market=Market(contract.market))
         except FinamTooLongTimeframeError:
-            raise RuntimeError('The requested period {} - {} is too long'
-                               ' for the {} timeframe. Try to shorten the period'
+            raise RuntimeError('The requested period {} - {} is too long for'
+                               ' the {} timeframe. Try to shorten the period'
                                .format(startdate, enddate, timeframe))
+        except FinamDownloadError as e:
+            if skiperr:
+                logger.error(e.message)
+                continue
+            else:
+                raise
         destpath = os.path.join(destdir, '{}-{}.csv'
                                 .format(contract.code, timeframe))
         data.to_csv(destpath, line_terminator=lineterm)
