@@ -12,7 +12,7 @@ except ImportError:
     from urllib.parse import urlencode
 
 import pandas as pd
-from pandas.parser import CParserError
+from pandas.io.parsers import ParserError
 
 from finam.utils import is_container, smart_decode
 
@@ -144,7 +144,7 @@ class ExporterMeta(object):
         # now we can coerce ids to ints
         df['id'] = df['id'].astype(int)
         df.set_index('id', inplace=True)
-        df.sort('market', inplace=True)
+        df.sort_values('market', inplace=True)
         return df
 
     def _fetch(self):
@@ -367,7 +367,7 @@ class Exporter(object):
                              parse_dates={'index': date_cols},
                              sep=';')
             df.sort_index(inplace=True)
-        except CParserError as e:
+        except ParserError as e:
             raise FinamDownloadError(e.message)
 
         return df
