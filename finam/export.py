@@ -18,7 +18,9 @@ from finam.utils import is_container, smart_decode
 
 __all__ = ['Market',
            'Timeframe',
+           'FinamExportError',
            'FinamDownloadError',
+           'FinamParsingError',
            'FinamTooLongTimeframeError',
            'FinamObjectNotFoundError',
            'Exporter']
@@ -75,6 +77,14 @@ class FinamExportError(Exception):
 
 
 class FinamDownloadError(FinamExportError):
+    pass
+
+
+class FinamThrottlingError(FinamExportError):
+    pass
+
+
+class FinamParsingError(FinamExportError):
     pass
 
 
@@ -270,6 +280,8 @@ class Exporter(object):
     ERROR_TOO_MUCH_WANTED = (u'Вы запросили данные за слишком '
                              u'большой временной период')
 
+    ERROR_THROTTLING = 'Forbidden: Access is denied'
+
     def __init__(self, export_host=None):
         self._meta = ExporterMeta(lazy=True)
         if export_host is not None:
@@ -288,9 +300,12 @@ class Exporter(object):
         if self.ERROR_TOO_MUCH_WANTED in data:
             raise FinamTooLongTimeframeError
 
+        if self.ERROR_THROTTLING in data:
+            raise FinamThrottlingError
+
         if not all(c in data for c in '<>;'):
-            raise FinamDownloadError('Returned data doesnt seem like '
-                                     'a valid csv dataset: {}'.format(data))
+            raise FinamParsingError('Returned data doesnt seem like '
+                                    'a valid csv dataset: {}'.format(data))
 
     def _decode_data(self, data):
         """
@@ -368,6 +383,6 @@ class Exporter(object):
                              sep=';')
             df.sort_index(inplace=True)
         except ParserError as e:
-            raise FinamDownloadError(e.message)
+            raise FinamParsingError(e.message)
 
         return df

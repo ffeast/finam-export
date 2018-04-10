@@ -12,6 +12,8 @@ from finam.export import (ExporterMeta,
                           Timeframe,
                           LookupComparator,
                           FinamDownloadError,
+                          FinamParsingError,
+                          FinamThrottlingError,
                           FinamTooLongTimeframeError,
                           FinamObjectNotFoundError)
 from finam.config import FINAM_CHARSET
@@ -172,7 +174,12 @@ class TestExporter(MockedExporterMixin, MockedMetaMixin):
 
     def test_sanity_checks(self):
         self.mock_exporter.return_value = 'any\nstring'.encode(FINAM_CHARSET)
-        with assert_raises(FinamDownloadError):
+        with assert_raises(FinamParsingError):
+            self.exporter.download(SBER.id, Market.SHARES)
+
+        self.mock_exporter.return_value = (
+            '<html><h1>Forbidden: Access is denied</h1></html>')
+        with assert_raises(FinamThrottlingError):
             self.exporter.download(SBER.id, Market.SHARES)
 
     @mock.patch('finam.export.pd.read_csv', return_value=pd.DataFrame())

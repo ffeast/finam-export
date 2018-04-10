@@ -1,3 +1,4 @@
+import time
 import os.path
 import datetime
 import logging
@@ -10,9 +11,8 @@ from click_datetime import Datetime
 from finam.export import (Exporter,
                           Timeframe,
                           Market,
-                          FinamDownloadError,
-                          FinamObjectNotFoundError,
-                          FinamTooLongTimeframeError)
+                          FinamExportError,
+                          FinamObjectNotFoundError)
 
 
 """
@@ -72,6 +72,10 @@ def _validate_enum(enumClass, ctx, param, value):
 @click.option('--lineterm',
               help='Line terminator',
               default='\r\n')
+@click.option('--delay',
+              help='Seconds to sleep between requests',
+              type=click.IntRange(0, 600),
+              default=1)
 @click.option('--startdate', help='Start date',
               type=Datetime(format='%Y-%m-%d'),
               default='2007-01-01',
@@ -81,7 +85,7 @@ def _validate_enum(enumClass, ctx, param, value):
               default=datetime.date.today().strftime('%Y-%m-%d'),
               required=False)
 def main(contracts, market, timeframe, destdir, lineterm,
-         startdate, enddate, skiperr):
+         delay, startdate, enddate, skiperr):
     exporter = Exporter()
 
     if all((contracts, market)):
@@ -108,11 +112,7 @@ def main(contracts, market, timeframe, destdir, lineterm,
                                      end_date=enddate,
                                      timeframe=Timeframe[timeframe],
                                      market=Market(contract.market))
-        except FinamTooLongTimeframeError:
-            raise RuntimeError('The requested period {} - {} is too long for'
-                               ' the {} timeframe. Try to shorten the period'
-                               .format(startdate, enddate, timeframe))
-        except FinamDownloadError as e:
+        except FinamExportError as e:
             if skiperr:
                 logger.error(e.message)
                 continue
@@ -121,8 +121,11 @@ def main(contracts, market, timeframe, destdir, lineterm,
         destpath = os.path.join(destdir, '{}-{}.csv'
                                 .format(contract.code, timeframe))
         data.to_csv(destpath, line_terminator=lineterm)
+        if delay > 0:
+            logger.info('Sleeping for {} second(s)'.format(delay))
+            time.sleep(delay)
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.DEBUG)
     main()
