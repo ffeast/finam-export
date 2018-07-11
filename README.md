@@ -1,5 +1,6 @@
 # finam-export
 [![Build Status](https://travis-ci.org/ffeast/finam-export.svg?branch=master)](https://travis-ci.org/ffeast/finam-export)
+
 Python client library to download data from finam.ru
 
 ## Capabilities
