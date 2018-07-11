@@ -1,7 +1,6 @@
 # finam-export
-Python client library to download data from finam.ru
-
 [![Build Status](https://travis-ci.org/ffeast/finam-export.svg?branch=master)](https://travis-ci.org/ffeast/finam-export)
+Python client library to download data from finam.ru
 
 ## Capabilities
 * Contracts lookup by market categories, id, code, name or their combinations using a rich set of mathching options
