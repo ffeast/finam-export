@@ -9,3 +9,5 @@ script:
 cache:
   - pip
 
+notifications:
+  email: false
