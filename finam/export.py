@@ -6,15 +6,16 @@ from enum import IntEnum
 from io import StringIO
 
 try:
-    from urllib import urlopen, urlencode
+    from urllib import urlencode
+    from urllib2 import urlopen
 except ImportError:
-    from urllib.request import urlopen
     from urllib.parse import urlencode
+    from urllib.request import urlopen
 
 import pandas as pd
 from pandas.io.parsers import ParserError
 
-from finam.utils import is_container, smart_decode
+from finam.utils import is_container, smart_decode, build_trusted_request
 
 __all__ = ['Market',
            'Timeframe',
@@ -160,10 +161,12 @@ class ExporterMeta(object):
     def _fetch(self):
         """
         Just fetches finam's metadata
+
         """
         logger.info('Fetching metadata from {}'.format(self.FINAM_DICT_URL))
+        request = build_trusted_request(self.FINAM_DICT_URL)
         try:
-            return urlopen(self.FINAM_DICT_URL).readlines()
+            return urlopen(request).readlines()
         except IOError as e:
             raise FinamDownloadError('Unable to load contracts dictionary: {}'
                                      .format(e))
@@ -320,8 +323,9 @@ class Exporter(object):
 
     def _fetch(self, url):
         logger.info('Loading data from {}'.format(url))
+        request = build_trusted_request(url)
         try:
-            return urlopen(url).read()
+            return urlopen(request).read()
         except IOError as e:
             raise FinamDownloadError('Unable to download {}: {}'
                                      .format(url, e.message))
