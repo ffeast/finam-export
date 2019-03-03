@@ -87,7 +87,10 @@ python samples/listing.py
 ## Development
 * clone the repo
 * `pip install -r ./requirements.txt`
+* run tests to ensure all is fine
+* `nosetests`
 * go ahead and enhance it!
+* don't forget to cover your changes with tests
 
 ## TODO:
 * Automatic requests splitting if an overly long time period is requested

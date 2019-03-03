@@ -1,5 +1,5 @@
 pandas==0.21.0
-requests==2.2.1
+requests==2.20.0
 enum34
 click==6.7
 click-datetime==0.2
