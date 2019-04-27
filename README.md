@@ -13,8 +13,8 @@ Python client library to download data from finam.ru
 * `samples/lookups.py` - shows how you can leverage lookup capabilities
 
 ## Utility scripts
-* `scripts/download.py` - feature-rich standalone script to download finam's data
-* `scripts/lookup.py` - to quickly check what's availble on finam
+* `scripts/finam-download.py` - feature-rich standalone script to download finam's data
+* `scripts/finam-lookup.py` - to quickly check what's availble on finam
 
 ## Show me something working!
 Here's the output
@@ -82,7 +82,7 @@ Once you have it installed just run
 ## Technical details
 * Targeted to Linux/Mac
 * Uses pandas inside, all data returned is pandas DataFrames
-* Tested with python2.7 and python3.7
+* Tested with python2.7 and python3.6+
 * Good tests coverage
 * Detailed logging of what's going on
 
