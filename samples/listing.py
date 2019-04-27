@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import logging
 
 from finam.export import Exporter, Market

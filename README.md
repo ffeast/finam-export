@@ -14,11 +14,12 @@ Python client library to download data from finam.ru
 
 ## Utility scripts
 * `scripts/download.py` - feature-rich standalone script to download finam's data
+* `scripts/lookup.py` - to quickly check what's availble on finam
 
 ## Show me something working!
 Here's the output
 ```
-PYTHONPATH=. python samples/download.py
+./samples/download.py
 *** Current Russian ruble exchange rates ***
 ... some debugging output omitted ...
             <OPEN>  <HIGH>    <LOW>  <CLOSE>       <VOL>
@@ -70,19 +71,20 @@ if __name__ == '__main__':
 If you haven't installed it from PyPi:
 ```bash
 pip install -r ./requirements.txt
-PYTHONPATH=. python samples/listing.py
+./samples/listing.py
 ```
 
-If you have it installed then just
+Once you have it installed just run
 ```bash
-python samples/listing.py
+./samples/listing.py
 ```
 
 ## Technical details
+* Targeted to Linux/Mac
 * Uses pandas inside, all data returned is pandas DataFrames
 * Tested with python2.7 and python3.7
-* Complete tests coverage
-* Detailed logging
+* Good tests coverage
+* Detailed logging of what's going on
 
 ## Development
 * clone the repo
@@ -91,7 +93,3 @@ python samples/listing.py
 * `nosetests`
 * go ahead and enhance it!
 * don't forget to cover your changes with tests
-
-## TODO:
-* Automatic requests splitting if an overly long time period is requested
-* Additional tools like current futures contracts, filtering and the like
