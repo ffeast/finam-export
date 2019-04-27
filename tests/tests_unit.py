@@ -65,33 +65,33 @@ class TestExporterMetaFile(object):
 
 class TestExporterMeta(object):
 
-    @mock.patch('finam.export.ExporterMetaPage')
-    def test_lookup(self, _):
-        fetcher = mock.MagicMock(return_value=fixtures.meta_valid__split)
-        meta = ExporterMeta(lazy=False, fetcher=fetcher)
+    def setup(self):
+        with mock.patch('finam.export.ExporterMetaPage'):
+            fetcher = mock.MagicMock(return_value=fixtures.meta_valid__split)
+            self._meta = ExporterMeta(lazy=False, fetcher=fetcher)
 
-        # by market
-        actual = meta.lookup(market=Market.SHARES)
+    def test_lookup_by_market(self):
+        actual = self._meta.lookup(market=Market.SHARES)
         assert set(actual['market']) == {Market.SHARES}
 
-        # by markets
-        actual = meta.lookup(market=[Market.SHARES, Market.BONDS])
+    def test_lookup_by_markets(self):
+        actual = self._meta.lookup(market=[Market.SHARES, Market.BONDS])
         assert set(actual['market']) == {Market.SHARES, Market.BONDS}
 
-        # by id
-        actual = meta.lookup(id_=SBER.id)
+    def test_lookup_by_id(self):
+        actual = self._meta.lookup(id_=SBER.id)
         assert set(actual.index) == {SBER.id}
 
-        # by ids
-        actual = meta.lookup(id_=(SBER.id, MICEX.id))
+    def test_lookup_by_ids(self):
+        actual = self._meta.lookup(id_=(SBER.id, MICEX.id))
         assert set(actual.index) == {SBER.id, MICEX.id}
 
-        # missing id
-        MISSING_ID = meta.meta.index.values.max() + 1
+    def test_lookup_by_missing_id(self):
+        MISSING_ID = self._meta.meta.index.values.max() + 1
         with assert_raises(FinamObjectNotFoundError):
-            meta.lookup(id_=MISSING_ID)
+            self._meta.lookup(id_=MISSING_ID)
 
-        # for various kinds of code and name matching
+    def test_lookup_name_code_by_comparators(self):
         for field in ('name', 'code'):
             field_values = getattr(SBER, field), getattr(MICEX, field)
             field_value = field_values[0]
@@ -102,24 +102,21 @@ class TestExporterMeta(object):
                                        operator.contains,
                                        startswith_compat)):
 
-                # single value
-                actual = meta.lookup(**{
+                actual = self._meta.lookup(**{
                     field: field_value, field + '_comparator': comparator
                 })
                 assert all(op(val, field_value) for val in set(actual[field]))
 
-                # multiple values
-                actual = meta.lookup(**{
+                actual = self._meta.lookup(**{
                     field: field_values,
                     field + '_comparator': comparator
                 })
                 for actual_value in set(actual[field]):
-                    # matches any of the queries arguments
                     assert any(op(actual_value, asked_value)
                                for asked_value in field_values)
 
-        # mixed lookup by market and codes
+    def test_lookup_by_market_and_codes(self):
         codes = SBER.code, 'GMKN'
-        actual = meta.lookup(market=Market.SHARES, code=codes)
+        actual = self._meta.lookup(market=Market.SHARES, code=codes)
         assert len(actual) == len(codes)
         assert set(actual['market']) == {Market.SHARES}
