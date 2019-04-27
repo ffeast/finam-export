@@ -1,5 +1,9 @@
+import re
 import collections
 import six
+from operator import attrgetter
+
+import click
 
 try:
     from urllib2 import Request
@@ -37,3 +41,22 @@ def build_trusted_request(url):
     headers = {'User-Agent': FINAM_TRUSTED_USER_AGENT}
     return Request(url, None, headers)
 
+
+def parse_script_link(html, src_entry):
+    re_src_entry = re.escape(src_entry)
+    pattern = '<script src="([^"]*{}[^"]*)"'.format(re_src_entry)
+    match = re.search(pattern, html)
+    if match is None:
+        raise ValueError
+    return match.group(1)
+
+
+def click_validate_enum(enumClass, ctx, param, value):
+    if value is not None:
+        try:
+            enumClass[value]
+        except KeyError:
+            allowed = map(attrgetter('name'), enumClass)
+            raise click.BadParameter('allowed values: {}'
+                                     .format(', '.join(allowed)))
+    return value

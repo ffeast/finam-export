@@ -27,8 +27,8 @@ class TestIntegration(object):
         assert minutes30_count > daily_count * SHARES_SESSION_MINUTES / 30
 
         for got in (got_daily, got_minutes):
-            assert got.index.min().to_datetime() >= start_date
-            assert got.index.max().to_datetime() <= end_date
+            assert got.index.min().to_pydatetime() >= start_date
+            assert got.index.max().to_pydatetime() <= end_date
             assert '<LAST>' not in got.columns
             assert '<CLOSE>' in got.columns
 
@@ -40,7 +40,7 @@ class TestIntegration(object):
                                 end_date=ticks_date,
                                 timeframe=Timeframe.TICKS)
         assert len(got) > SHARES_SESSION_MINUTES * 60
-        assert got.index.min().to_datetime() >= ticks_date
-        assert got.index.min().to_datetime() < ticks_date + timedelta(days=1)
+        assert got.index.min().to_pydatetime() >= ticks_date
+        assert got.index.min().to_pydatetime() < ticks_date + timedelta(days=1)
         assert '<LAST>' in got.columns
         assert '<CLOSE>' not in got.columns

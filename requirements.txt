@@ -1,4 +1,4 @@
-pandas==0.21.0
+pandas==0.24.2
 requests==2.20.0
 enum34
 click==6.7

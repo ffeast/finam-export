@@ -39,9 +39,8 @@ class FixtureRegistry(object):
                                    .format(fixture, path))
             with open(fixture, 'r', encoding=FINAM_CHARSET) as f:
                 data = f.read()
-                items[name] = smart_encode(data)
-                items[name + self.__SPLIT_SUFFIX] =\
-                    smart_encode(data.split('\n'))
+                items[name] = data
+                items[name + self.__SPLIT_SUFFIX] = data.split('\n')
         self._fixtures = items
 
     def __getattr__(self, key):

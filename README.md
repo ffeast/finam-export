@@ -80,7 +80,7 @@ python samples/listing.py
 
 ## Technical details
 * Uses pandas inside, all data returned is pandas DataFrames
-* Tested with python2.7 and python3.4
+* Tested with python2.7 and python3.7
 * Complete tests coverage
 * Detailed logging
 

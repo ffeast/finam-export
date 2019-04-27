@@ -15,7 +15,10 @@ except ImportError:
 import pandas as pd
 from pandas.io.parsers import ParserError
 
-from finam.utils import is_container, smart_decode, build_trusted_request
+from finam.utils import (is_container,
+                         smart_decode,
+                         build_trusted_request,
+                         parse_script_link)
 
 __all__ = ['Market',
            'Timeframe',
@@ -97,15 +100,62 @@ class FinamTooLongTimeframeError(FinamExportError):
     pass
 
 
-class ExporterMeta(object):
+def fetch_url(url, lines=False):
+    """
+    Fetches url from finam.ru
+    """
+    logger.info('Fetching {}'.format(url))
+    request = build_trusted_request(url)
+    try:
+        fh = urlopen(request)
+        if lines:
+            response = fh.readlines()
+        else:
+            response = fh.read()
+    except IOError as e:
+        raise FinamDownloadError('Unable to load {}: {}'.format(url, e))
+    try:
+        return smart_decode(response)
+    except UnicodeDecodeError as e:
+        raise FinamDownloadError('Unable to decode: {}'.format(e.message))
 
-    FINAM_DICT_URL = 'https://www.finam.ru/cache/icharts/icharts.js'
+
+class ExporterMetaPage(object):
+
+    FINAM_BASE = 'https://www.finam.ru'
+    FINAM_ENTRY_URL = FINAM_BASE + '/profile/moex-akcii/gazprom/export/'
+    FINAM_META_FILENAME = 'icharts.js'
+
+    def __init__(self, fetcher=fetch_url):
+        self._fetcher = fetcher
+
+    def find_meta_file(self):
+        """
+        Finds finam's meta dictionary path
+
+        From 03.2019 onwards it moved to a temporary path, from its url
+        it looks like a transient cache and needs to be discovered every time
+
+        Included as
+        <script src="/somepath/icharts.js" type="text/javascript"></script>
+        into raw HTML page code
+        """
+        html = self._fetcher(self.FINAM_ENTRY_URL)
+        try:
+            url = parse_script_link(html, self.FINAM_META_FILENAME)
+        except ValueError as e:
+            raise FinamParsingError('Unable to parse meta url from html: {}'
+                                    .format(e))
+        return self.FINAM_BASE + url
+
+
+class ExporterMetaFile(object):
+
     FINAM_CATEGORIES = -1
 
-    def __init__(self, lazy=True):
-        self._meta = None
-        if not lazy:
-            self._maybe_load()
+    def __init__(self, url, fetcher=fetch_url):
+        self._url = url
+        self._fetcher = fetcher
 
     def _parse_js_assignment(self, line):
         """
@@ -140,7 +190,7 @@ class ExporterMeta(object):
         # int items
         return items.split(',')
 
-    def _parse(self, data):
+    def _parse_js(self, data):
         """
         Parses js file used by finam.ru export tool
         """
@@ -158,44 +208,29 @@ class ExporterMeta(object):
         df.sort_values('market', inplace=True)
         return df
 
-    def _fetch(self):
-        """
-        Just fetches finam's metadata
+    def parse_df(self):
+        response = self._fetcher(self._url, lines=True)
+        return self._parse_js(response)
 
-        """
-        logger.info('Fetching metadata from {}'.format(self.FINAM_DICT_URL))
-        request = build_trusted_request(self.FINAM_DICT_URL)
-        try:
-            return urlopen(request).readlines()
-        except IOError as e:
-            raise FinamDownloadError('Unable to load contracts dictionary: {}'
-                                     .format(e))
 
-    def _decode_data(self, data):
-        """
-        Converts finam's charset to utf8
-        """
-        logger.info('Decoding response')
-        try:
-            return smart_decode(data)
-        except UnicodeDecodeError as e:
-            raise FinamExportError('Unable to decode dictionary content: {}'
-                                   .format(e.message))
+class ExporterMeta(object):
 
-    def _maybe_load(self):
-        """
-        Downloads and parses finam's metadata if it's not done yet
-        """
+    def __init__(self, lazy=True, fetcher=fetch_url):
+        self._meta = None
+        self._fetcher = fetcher
+        if not lazy:
+            self._load()
+
+    def _load(self):
         if self._meta is not None:
-            return
-
-        data_cp1251 = self._fetch()
-        data = self._decode_data(data_cp1251)
-        self._meta = self._parse(data)
+            return self._meta
+        page = ExporterMetaPage(self._fetcher)
+        meta_url = page.find_meta_file()
+        meta_file = ExporterMetaFile(meta_url, self._fetcher)
+        self._meta = meta_file.parse_df()
 
     @property
     def meta(self):
-        # so that dataframe can't be modified externally
         return self._meta.copy(deep=True)
 
     def _apply_filter(self, col, val, comparator):
@@ -243,7 +278,7 @@ class ExporterMeta(object):
             raise ValueError('Either id or code or name or market'
                              ' must be specified')
 
-        self._maybe_load()
+        self._load()
         filters = []
 
         # applying filters
@@ -285,8 +320,9 @@ class Exporter(object):
 
     ERROR_THROTTLING = 'Forbidden: Access is denied'
 
-    def __init__(self, export_host=None):
+    def __init__(self, export_host=None, fetcher=fetch_url):
         self._meta = ExporterMeta(lazy=True)
+        self._fetcher = fetcher
         if export_host is not None:
             self._export_host = export_host
         else:
@@ -299,7 +335,7 @@ class Exporter(object):
                        urlencode(params)))
         return url
 
-    def _do_sanity_checks(self, data):
+    def _sanity_check(self, data):
         if self.ERROR_TOO_MUCH_WANTED in data:
             raise FinamTooLongTimeframeError
 
@@ -309,26 +345,6 @@ class Exporter(object):
         if not all(c in data for c in '<>;'):
             raise FinamParsingError('Returned data doesnt seem like '
                                     'a valid csv dataset: {}'.format(data))
-
-    def _decode_data(self, data):
-        """
-        Converts finam's charset to utf8
-        """
-        logger.info('Decoding response')
-        try:
-            return smart_decode(data)
-        except UnicodeDecodeError as e:
-            raise FinamExportError('Unable to decode content: {}'
-                                   .format(e.message))
-
-    def _fetch(self, url):
-        logger.info('Loading data from {}'.format(url))
-        request = build_trusted_request(url)
-        try:
-            return urlopen(request).read()
-        except IOError as e:
-            raise FinamDownloadError('Unable to download {}: {}'
-                                     .format(url, e.message))
 
     def lookup(self, *args, **kwargs):
         return self._meta.lookup(*args, **kwargs)
@@ -372,9 +388,8 @@ class Exporter(object):
         url = self._build_url(params)
         # deliberately not using pd.read_csv's ability to fetch
         # urls to fully control what's happening
-        data_cp1251 = self._fetch(url)
-        data = self._decode_data(data_cp1251)
-        self._do_sanity_checks(data)
+        data = self._fetcher(url)
+        self._sanity_check(data)
         if timeframe == Timeframe.TICKS:
             date_cols = [2, 3]
         else:

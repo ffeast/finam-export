@@ -1,3 +1,5 @@
+#!/bin/env python
+import sys
 import time
 import os.path
 import datetime
@@ -13,6 +15,7 @@ from finam.export import (Exporter,
                           Market,
                           FinamExportError,
                           FinamObjectNotFoundError)
+from finam.utils import click_validate_enum
 
 
 """
@@ -34,17 +37,6 @@ def _arg_split(ctx, param, value):
     return items
 
 
-def _validate_enum(enumClass, ctx, param, value):
-    if value is not None:
-        try:
-            enumClass[value]
-        except KeyError:
-            allowed = map(attrgetter('name'), enumClass)
-            raise click.BadParameter('allowed values: {}'
-                                     .format(', '.join(allowed)))
-    return value
-
-
 @click.command()
 @click.option('--contracts',
               help='Contracts to lookup',
@@ -52,12 +44,12 @@ def _validate_enum(enumClass, ctx, param, value):
               callback=_arg_split)
 @click.option('--market',
               help='Market to lookup',
-              callback=partial(_validate_enum, Market),
+              callback=partial(click_validate_enum, Market),
               required=False)
 @click.option('--timeframe',
               help='Timeframe to use (DAILY, HOURLY, MINUTES30 etc)',
               default=Timeframe.DAILY.name,
-              callback=partial(_validate_enum, Timeframe),
+              callback=partial(click_validate_enum, Timeframe),
               required=False)
 @click.option('--destdir',
               help='Destination directory name',
@@ -88,20 +80,21 @@ def main(contracts, market, timeframe, destdir, lineterm,
          delay, startdate, enddate, skiperr):
     exporter = Exporter()
 
-    if all((contracts, market)):
-        raise click.BadParameter('Either contracts or '
-                                 'market must be specified')
-    elif not any((contracts, market)):
+    if not any((contracts, market)):
         raise click.BadParameter('Neither contracts nor market is specified')
-    elif market:
-        contracts = exporter.lookup(market=Market[market])['code'].tolist()
+
+    market_filter = dict()
+    if not contracts:
+        market_filter.update(market=Market[market])
+        contracts = exporter.lookup(**market_filter)['code'].tolist()
 
     for contract_code in contracts:
         logging.info('Handling {}'.format(contract_code))
         try:
-            contracts = exporter.lookup(code=contract_code)
+            contracts = exporter.lookup(code=contract_code, **market_filter)
         except FinamObjectNotFoundError:
-            raise RuntimeError('unknown contract "{}"'.format(contract_code))
+            logger.error('unknown contract "{}"'.format(contract_code))
+            sys.exit(1)
         else:
             contract = contracts.reset_index().iloc[0]
 
