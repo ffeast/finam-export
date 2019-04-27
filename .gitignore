@@ -1,3 +1,7 @@
 *.pyc
 .coverage
 .noseids
+dist/
+build/
+.eggs/
+finam_export.egg-info/

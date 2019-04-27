@@ -7,6 +7,9 @@ Python client library to download data from finam.ru
 * Contracts lookup by market categories, id, code, name or their combinations using a rich set of mathching options
 * Download data of any timeframe available on finam.ru ranging from ticks to monthly resolution
 
+## Installation
+* `pip install finam-export`
+
 ## Samples provided
 * `samples/listing.py` - simply lists some contracts from every supported market
 * `samples/download.py` - downloads some data and prints it out
