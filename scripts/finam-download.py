@@ -84,9 +84,10 @@ def main(contracts, market, timeframe, destdir, lineterm,
         raise click.BadParameter('Neither contracts nor market is specified')
 
     market_filter = dict()
-    if not contracts:
+    if market:
         market_filter.update(market=Market[market])
-        contracts = exporter.lookup(**market_filter)['code'].tolist()
+        if not contracts:
+            contracts = exporter.lookup(**market_filter)['code'].tolist()
 
     for contract_code in contracts:
         logging.info('Handling {}'.format(contract_code))
