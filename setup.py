@@ -2,7 +2,7 @@
 # coding: utf8
 from setuptools import setup
 
-VERSION = '1.0.1'
+VERSION = '2.0.0'
 
 long_description = open('README.md').read()
 
