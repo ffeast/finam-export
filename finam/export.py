@@ -43,6 +43,7 @@ class Market(IntEnum):
 
     BONDS = 2
     COMMODITIES = 24
+    CURRENCIES_WORLD = 5
     CURRENCIES = 45
     ETF = 28
     ETF_MOEX = 515
