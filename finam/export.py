@@ -4,6 +4,7 @@ import logging
 import operator
 from enum import IntEnum
 from io import StringIO
+from decimal import Decimal
 
 try:
     from urllib import urlencode
@@ -329,6 +330,10 @@ class Exporter(object):
         else:
             self._export_host = self.DEFAULT_EXPORT_HOST
 
+    @staticmethod
+    def _convert_decimals(value):
+        return float(Decimal(value))
+
     def _build_url(self, params):
         url = ('http://{}/table.csv?{}&{}'
                .format(self._export_host,
@@ -393,14 +398,18 @@ class Exporter(object):
         self._sanity_check(data)
         if timeframe == Timeframe.TICKS:
             date_cols = [2, 3]
+            decimal_cols = ["<LAST>"]
         else:
             date_cols = [0, 1]
+            decimal_cols = ["<OPEN>", "<HIGH>", "<LOW>", "<CLOSE>"]
 
         try:
+            decimals_converter_dict = {column: self._convert_decimals for column in decimal_cols}
             df = pd.read_csv(StringIO(data),
                              index_col=0,
                              parse_dates={'index': date_cols},
-                             sep=';')
+                             sep=';',
+                             converters=decimals_converter_dict)
             df.sort_index(inplace=True)
         except ParserError as e:
             raise FinamParsingError(e.message)
