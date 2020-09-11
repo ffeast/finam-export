@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [x.x.x]
+### Changed
+- switched logging mode to .INFO to get rid of annoying debug lines
+- unpinned urltools dependency as the previous version doesn't exist
+
 ## [2.0.0] - 2020-05-10
 ### Added
 - new market CURRENCIES_WORLD=5 (https://github.com/ffeast/finam-export/pull/9)

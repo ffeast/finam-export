@@ -71,16 +71,10 @@ if __name__ == '__main__':
 ```
 
 # Playing samples
-If you have it installed from PyPi just run
-
-```bash
-./samples/listing.py
-```
-
 If you have cloned it from github:
 ```bash
 pip install -r ./requirements.txt
-./samples/listing.py
+PYTHONPATH=. ./samples/listing.py
 ```
 
 ## Technical details

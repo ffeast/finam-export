@@ -7,4 +7,4 @@ click-datetime==0.2
 nose
 mock
 coverage
-urltools==0.3.2
+urltools

@@ -11,7 +11,7 @@ SAMPLE_SIZE = 5
 
 
 def main():
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
     exporter = Exporter()
     for market in Market:
         print('{0.name:*^25}'.format(market))
