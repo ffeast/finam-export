@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [x.x.x]
+### Added
+- --ext option support in ./scripts/finam-download.py to enable configuration of the resulting files
 ### Changed
 - date/time export format changed to separate columns <DATE> and <TIME> instead of a datetime in a single <DATE> field to make it compatible with tslab and other software
 - switched logging mode to .INFO to get rid of annoying debug lines
