@@ -397,12 +397,9 @@ class Exporter(object):
             date_cols = [0, 1]
 
         try:
-            df = pd.read_csv(StringIO(data),
-                             index_col=0,
-                             parse_dates={'index': date_cols},
-                             sep=';')
+            df = pd.read_csv(StringIO(data), sep=';')
             df.sort_index(inplace=True)
         except ParserError as e:
-            raise FinamParsingError(e.message)
+            raise FinamParsingError(e)
 
         return df

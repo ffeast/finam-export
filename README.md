@@ -22,22 +22,16 @@ Python client library to download data from finam.ru
 ## Show me something working!
 Here's the output
 ```
-./samples/download.py
 *** Current Russian ruble exchange rates ***
-... some debugging output omitted ...
-            <OPEN>  <HIGH>    <LOW>  <CLOSE>       <VOL>
-index
-2016-11-07  63.945  64.085  63.6625   63.695  1214085000
-
-[1 rows x 5 columns]
+INFO:finam.export:Fetching https://www.finam.ru/profile/moex-akcii/gazprom/export/
+INFO:finam.export:Fetching https://www.finam.ru/cache/N72Hgd54/icharts/icharts.js
+INFO:finam.export:Fetching http://export.finam.ru/table.csv?d=d&f=table&e=.csv&dtf=1&tmf=3&MSOR=0&mstime=on&mstimever=1&sep=3&sep2=1&at=1&p=8&em=182456&market=45&df=1&mf=0&yf=2007&dt=12&mt=8&yt=2020&cn=USD000000TOD&code=USD000000TOD&datf=5
+        <DATE>    <TIME>  <OPEN>  <HIGH>  <LOW>  <CLOSE>      <VOL>
+2163  20200911  00:00:00   75.19   75.19  74.72    74.95  765709000
 *** Current Brent Oil price ***
-INFO:root:Loading data from http://export.finam.ru/table.csv?sep=3&at=1&e=.csv&d=d&f=table&dtf=1&MSOR=0&tmf=3&mstimever=1&mstime=on&sep2=1&em=19473&code=BZ&cn=BZ&df=1&yf=2007&dt=7&datf=5&yt=2016&market=24&mf=0&mt=10&p=8
-INFO:root:Decoding response
-            <OPEN>  <HIGH>  <LOW>  <CLOSE>  <VOL>
-index
-2016-11-07   45.95   46.38   45.8    46.01  52605
-
-[1 rows x 5 columns]
+INFO:finam.export:Fetching http://export.finam.ru/table.csv?d=d&f=table&e=.csv&dtf=1&tmf=3&MSOR=0&mstime=on&mstimever=1&sep=3&sep2=1&at=1&p=8&em=19473&market=24&df=1&mf=0&yf=2007&dt=12&mt=8&yt=2020&cn=BZ&code=BZ&datf=5
+        <DATE>    <TIME>  <OPEN>  <HIGH>  <LOW>  <CLOSE>   <VOL>
+4206  20200911  00:00:00   39.96   40.34  39.38    39.92  114897
 ```
 and here's the code producing this output:
 ```
@@ -66,7 +60,7 @@ def main():
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
     main()
 ```
 

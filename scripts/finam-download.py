@@ -76,8 +76,11 @@ def _arg_split(ctx, param, value):
               type=Datetime(format='%Y-%m-%d'),
               default=datetime.date.today().strftime('%Y-%m-%d'),
               required=False)
+@click.option('--ext',
+              help='Resulting file extension',
+              default='csv')
 def main(contracts, market, timeframe, destdir, lineterm,
-         delay, startdate, enddate, skiperr):
+         delay, startdate, enddate, skiperr, ext):
     exporter = Exporter()
 
     if not any((contracts, market)):
@@ -108,13 +111,14 @@ def main(contracts, market, timeframe, destdir, lineterm,
                                      market=Market(contract.market))
         except FinamExportError as e:
             if skiperr:
-                logger.error(e.message)
+                logger.error(repr(e))
                 continue
             else:
                 raise
-        destpath = os.path.join(destdir, '{}-{}.csv'
-                                .format(contract.code, timeframe))
-        data.to_csv(destpath, line_terminator=lineterm)
+        destpath = os.path.join(destdir, '{}-{}.{}'
+                                .format(contract.code, timeframe, ext))
+
+        data.to_csv(destpath, index=False, line_terminator=lineterm)
         if delay > 0:
             logger.info('Sleeping for {} second(s)'.format(delay))
             time.sleep(delay)

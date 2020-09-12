@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [x.x.x]
 ### Changed
+- date/time export format changed to separate columns <DATE> and <TIME> instead of a datetime in a single <DATE> field to make it compatible with tslab and other software
 - switched logging mode to .INFO to get rid of annoying debug lines
 - unpinned urltools dependency as the previous version doesn't exist
 
