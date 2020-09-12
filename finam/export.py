@@ -4,13 +4,8 @@ import logging
 import operator
 from enum import IntEnum
 from io import StringIO
-
-try:
-    from urllib import urlencode
-    from urllib2 import urlopen
-except ImportError:
-    from urllib.parse import urlencode
-    from urllib.request import urlopen
+from urllib.parse import urlencode
+from urllib.request import urlopen
 
 import pandas as pd
 from pandas.io.parsers import ParserError

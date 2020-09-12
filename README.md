@@ -74,7 +74,7 @@ PYTHONPATH=. ./samples/listing.py
 ## Technical details
 * Targeted to Linux/Mac
 * Uses pandas inside, all data returned is pandas DataFrames
-* Tested with python2.7 and python3.6+
+* Tested with python3.6+
 * Good tests coverage
 * Detailed logging of what's going on
 

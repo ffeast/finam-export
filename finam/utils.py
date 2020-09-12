@@ -2,13 +2,9 @@ import re
 import collections
 import six
 from operator import attrgetter
+from urllib.request import Request
 
 import click
-
-try:
-    from urllib2 import Request
-except ImportError:
-    from urllib.request import Request
 
 from .config import FINAM_CHARSET, FINAM_TRUSTED_USER_AGENT
 
