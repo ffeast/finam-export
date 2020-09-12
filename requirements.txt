@@ -1,7 +1,7 @@
-pandas==0.24.2
-requests==2.20.0
+pandas==1.1.2
+requests==2.24.0
 enum34
-click==6.7
+click==7.1.2
 click-datetime==0.2
 # dev
 nose
