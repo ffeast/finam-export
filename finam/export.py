@@ -64,7 +64,6 @@ class Timeframe(IntEnum):
     WEEKLY = 9
     MONTHLY = 10
 
-
 class LookupComparator(IntEnum):
 
     EQUALS = 1
@@ -304,8 +303,6 @@ class Exporter(object):
         'dtf': '1',
         'tmf': '3',
         'MSOR': '0',
-        'mstime': 'on',
-        'mstimever': '1',
         'sep': '3',
         'sep2': '1',
         'at': '1'
@@ -350,8 +347,13 @@ class Exporter(object):
                  market,
                  start_date=datetime.date(2007, 1, 1),
                  end_date=None,
-                 timeframe=Timeframe.DAILY):
+                 timeframe=Timeframe.DAILY,
+                 moscowtime=True):
 
+        if moscowtime:
+            mstimever='1'
+        else:
+            mstimever='0'
         items = self._meta.lookup(id_=id_, market=market)
         # i.e. for markets 91, 519, 2
         # id duplicates are feasible, looks like corrupt data on finam
@@ -376,10 +378,15 @@ class Exporter(object):
             'yt': end_date.year,
             'cn': code,
             'code': code,
+            #1 for moscow time 0 for market time
+            'mstimever': mstimever,
             # I would guess this param denotes 'data format'
             # that differs for ticks only
             'datf': 6 if timeframe == Timeframe.TICKS.value else 5
         }
+
+        if moscowtime:
+            params['mstime']='on'
 
         url = self._build_url(params)
         # deliberately not using pd.read_csv's ability to fetch
