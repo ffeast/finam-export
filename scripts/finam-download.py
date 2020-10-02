@@ -79,8 +79,13 @@ def _arg_split(ctx, param, value):
 @click.option('--ext',
               help='Resulting file extension',
               default='csv')
+@click.option('--moscowtime',
+              help='Moscow time True or False',
+              required=False,
+              default=True,
+              type=bool)
 def main(contracts, market, timeframe, destdir, lineterm,
-         delay, startdate, enddate, skiperr, ext):
+         delay, startdate, enddate, skiperr, ext, moscowtime):
     exporter = Exporter()
 
     if not any((contracts, market)):
@@ -108,7 +113,8 @@ def main(contracts, market, timeframe, destdir, lineterm,
                                      start_date=startdate,
                                      end_date=enddate,
                                      timeframe=Timeframe[timeframe],
-                                     market=Market(contract.market))
+                                     market=Market(contract.market),
+                                     moscowtime=moscowtime)
         except FinamExportError as e:
             if skiperr:
                 logger.error(repr(e))
