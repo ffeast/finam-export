@@ -3,7 +3,8 @@ __all__ = ['FinamExportError',
            'FinamThrottlingError',
            'FinamParsingError',
            'FinamObjectNotFoundError',
-           'FinamTooLongTimeframeError'
+           'FinamTooLongTimeframeError',
+           'FinamAlreadyInProgressError'
            ]
 
 
@@ -28,4 +29,8 @@ class FinamObjectNotFoundError(FinamExportError):
 
 
 class FinamTooLongTimeframeError(FinamExportError):
+    pass
+
+
+class FinamAlreadyInProgressError(FinamExportError):
     pass

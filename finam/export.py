@@ -19,6 +19,7 @@ from .exception import (FinamDownloadError,
                         FinamParsingError,
                         FinamObjectNotFoundError,
                         FinamTooLongTimeframeError,
+                        FinamAlreadyInProgressError,
                         FinamThrottlingError)
 
 
@@ -260,6 +261,7 @@ class Exporter(object):
                              u'большой временной период')
 
     ERROR_THROTTLING = 'Forbidden: Access is denied'
+    ERROR_ALREADY_IN_PROGRESS = u'Система уже обрабатывает Ваш запрос'
 
     def __init__(self, export_host=None, fetcher=fetch_url):
         self._meta = ExporterMeta(lazy=True)
@@ -290,6 +292,9 @@ class Exporter(object):
         if self.ERROR_THROTTLING in data:
             raise FinamThrottlingError
 
+        if self.ERROR_ALREADY_IN_PROGRESS in data:
+            raise FinamAlreadyInProgressError
+
         if not all(c in data for c in '<>;'):
             raise FinamParsingError('Returned data doesnt seem like '
                                     'a valid csv dataset: {}'.format(data))
@@ -303,7 +308,8 @@ class Exporter(object):
                  start_date=datetime.date(2007, 1, 1),
                  end_date=None,
                  timeframe=Timeframe.DAILY,
-                 delay=1):
+                 delay=1,
+                 max_in_progress_retries=10):
         items = self._meta.lookup(id_=id_, market=market)
         # i.e. for markets 91, 519, 2
         # id duplicates are feasible, looks like corrupt data on finam
@@ -346,8 +352,22 @@ class Exporter(object):
             url = self._build_url(params)
             # deliberately not using pd.read_csv's ability to fetch
             # urls to fully control what's happening
-            data = self._postprocess(self._fetcher(url), timeframe)
-            self._sanity_check(data)
+            retries = 0
+            while True:
+                data = self._fetcher(url)
+                data = self._postprocess(data, timeframe)
+                try:
+                    self._sanity_check(data)
+                except FinamAlreadyInProgressError:
+                    if retries <= max_in_progress_retries:
+                        retries += 1
+                        logger.info('Finam work is in progress, sleeping'
+                                    ' for {} second(s) before retry #{}'
+                                    .format(delay, retries))
+                        time.sleep(delay)
+                    else:
+                        raise
+                break
 
             try:
                 chunk_df = pd.read_csv(StringIO(data), sep=';')
