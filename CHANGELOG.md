@@ -9,9 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - automatic request split for long intervals (https://github.com/ffeast/finam-export/issues/4)
 ### Changed
 - from now on everything needs to be exported from finam package (instead of finam.export and others)
+- automatic retries when hitting the error "Система уже обрабатывает Ваш запрос. Дождитесь окончания обработки."
 ### Fixed
 - download from time intervals that don't include any trading sessions (i.e. 2018-01-01) is now safe and would result in empty data file instead of an exception
-- automatic retries when hitting the error "Система уже обрабатывает Ваш запрос. Дождитесь окончания обработки."
 
 ## [3.0.1] - 2020-09-12
 ### Changed

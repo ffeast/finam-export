@@ -365,6 +365,7 @@ class Exporter(object):
                                     ' for {} second(s) before retry #{}'
                                     .format(delay, retries))
                         time.sleep(delay)
+                        continue
                     else:
                         raise
                 break
