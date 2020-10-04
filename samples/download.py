@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import logging
 
-from finam.export import Exporter, Market, LookupComparator
+from finam import Exporter, Market, LookupComparator
 
 """
 Full-on example displaying up-to-date values of some important indicators

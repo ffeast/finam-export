@@ -1,26 +1,23 @@
-# coding: utf-8
 import operator
-import datetime
+from datetime import date
 
 import mock
 import pandas as pd
-from nose.tools import assert_raises
+from nose.tools import assert_raises, assert_raises_regexp
+from parameterized import parameterized
 
+from finam import (Market,
+                   Timeframe,
+                   LookupComparator,
+                   FinamDownloadError,
+                   FinamParsingError,
+                   FinamObjectNotFoundError)
 from finam.export import (ExporterMeta,
                           ExporterMetaPage,
-                          ExporterMetaFile,
-                          Exporter,
-                          Market,
-                          Timeframe,
-                          LookupComparator,
-                          FinamDownloadError,
-                          FinamParsingError,
-                          FinamThrottlingError,
-                          FinamTooLongTimeframeError,
-                          FinamObjectNotFoundError)
-from finam.config import FINAM_CHARSET
+                          ExporterMetaFile)
+from finam.interval import split_interval
 
-from . import fixtures, startswith_compat, urls_equal, SBER, MICEX
+from . import fixtures, startswith_compat, SBER, MICEX
 
 
 class TestExporterMetaPage(object):
@@ -120,3 +117,32 @@ class TestExporterMeta(object):
         actual = self._meta.lookup(market=Market.SHARES, code=codes)
         assert len(actual) == len(codes)
         assert set(actual['market']) == {Market.SHARES}
+
+
+@parameterized([
+    (date(2016, 1, 1), date(2020, 1, 30), Timeframe.DAILY,
+     ((date(2016, 1, 1), date(2020, 1, 30)),)),
+    (date(2016, 1, 1), date(2016, 1, 1), Timeframe.MINUTES1,
+     ((date(2016, 1, 1), date(2016, 1, 1)),)),
+    (date(2016, 1, 1), date(2016, 1, 2), Timeframe.MINUTES1,
+     ((date(2016, 1, 1), date(2016, 1, 2)),)),
+    (date(2018, 1, 1), date(2020, 9, 15), Timeframe.MINUTES1,
+     ((date(2018, 1, 1), date(2019, 1, 1)),
+      (date(2019, 1, 2), date(2020, 1, 1)),
+      (date(2020, 1, 2), date(2020, 9, 15)),)),
+    (date(2019, 3, 1), date(2020, 3, 1), Timeframe.MINUTES1,
+     ((date(2019, 3, 1), date(2020, 2, 29)),
+      (date(2020, 3, 1), date(2020, 3, 1)),)),
+    (date(2018, 3, 1), date(2019, 3, 1), Timeframe.MINUTES1,
+     ((date(2018, 3, 1), date(2019, 3, 1)),)),
+    (date(2019, 3, 1), date(2020, 2, 29), Timeframe.MINUTES1,
+     ((date(2019, 3, 1), date(2020, 2, 29)),))
+])
+def test_split_interval(start_date, end_date, interval, expected):
+    actual = split_interval(start_date, end_date, interval)
+    assert expected == actual
+
+
+def test_split_interval_validation():
+    with assert_raises_regexp(ValueError, 'start_date must be'):
+        split_interval(date(2020, 1, 1), date(2010, 1, 1), Timeframe.DAILY)

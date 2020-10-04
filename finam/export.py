@@ -1,4 +1,4 @@
-# coding: utf-8
+import time
 import datetime
 import logging
 import operator
@@ -10,59 +10,25 @@ from urllib.request import urlopen
 import pandas as pd
 from pandas.io.parsers import ParserError
 
-from finam.utils import (is_container,
-                         smart_decode,
-                         build_trusted_request,
-                         parse_script_link)
+from .utils import (is_container,
+                    smart_decode,
+                    build_trusted_request,
+                    parse_script_link)
+from .const import Timeframe
+from .exception import (FinamDownloadError,
+                        FinamParsingError,
+                        FinamObjectNotFoundError,
+                        FinamTooLongTimeframeError,
+                        FinamThrottlingError)
 
-__all__ = ['Market',
-           'Timeframe',
-           'FinamExportError',
-           'FinamDownloadError',
-           'FinamParsingError',
-           'FinamTooLongTimeframeError',
-           'FinamObjectNotFoundError',
-           'Exporter']
+
+from .interval import split_interval
+
+
+__all__ = ['Exporter', 'LookupComparator']
 
 
 logger = logging.getLogger(__name__)
-
-
-class Market(IntEnum):
-
-    """
-    Markets mapped to ids used by finam.ru export
-
-    List is incomplete, extend it when needed
-    """
-
-    BONDS = 2
-    COMMODITIES = 24
-    CURRENCIES_WORLD = 5
-    CURRENCIES = 45
-    ETF = 28
-    ETF_MOEX = 515
-    FUTURES = 14  # non-expired futures
-    FUTURES_ARCHIVE = 17  # expired futures
-    FUTURES_USA = 7
-    INDEXES = 6
-    SHARES = 1
-    SPB = 517
-    USA = 25
-
-
-class Timeframe(IntEnum):
-
-    TICKS = 1
-    MINUTES1 = 2
-    MINUTES5 = 3
-    MINUTES10 = 4
-    MINUTES15 = 5
-    MINUTES30 = 6
-    HOURLY = 7
-    DAILY = 8
-    WEEKLY = 9
-    MONTHLY = 10
 
 
 class LookupComparator(IntEnum):
@@ -70,30 +36,6 @@ class LookupComparator(IntEnum):
     EQUALS = 1
     STARTSWITH = 2
     CONTAINS = 3
-
-
-class FinamExportError(Exception):
-    pass
-
-
-class FinamDownloadError(FinamExportError):
-    pass
-
-
-class FinamThrottlingError(FinamExportError):
-    pass
-
-
-class FinamParsingError(FinamExportError):
-    pass
-
-
-class FinamObjectNotFoundError(FinamExportError):
-    pass
-
-
-class FinamTooLongTimeframeError(FinamExportError):
-    pass
 
 
 def fetch_url(url, lines=False):
@@ -311,6 +253,9 @@ class Exporter(object):
         'at': '1'
     }
 
+    EMPTY_RESULT_NOT_TICKS = '<DATE>;<TIME>;<OPEN>;<HIGH>;<LOW>;<CLOSE>;<VOL>'
+    EMPTY_RESULT_TICKS = '<TICKER>;<PER>;<DATE>;<TIME>;<LAST>;<VOL>'
+
     ERROR_TOO_MUCH_WANTED = (u'Вы запросили данные за слишком '
                              u'большой временной период')
 
@@ -331,6 +276,13 @@ class Exporter(object):
                        urlencode(params)))
         return url
 
+    def _postprocess(self, data, timeframe):
+        if data == '':
+            if timeframe == timeframe.TICKS:
+                return self.EMPTY_RESULT_TICKS
+            return self.EMPTY_RESULT_NOT_TICKS
+        return data
+
     def _sanity_check(self, data):
         if self.ERROR_TOO_MUCH_WANTED in data:
             raise FinamTooLongTimeframeError
@@ -350,8 +302,8 @@ class Exporter(object):
                  market,
                  start_date=datetime.date(2007, 1, 1),
                  end_date=None,
-                 timeframe=Timeframe.DAILY):
-
+                 timeframe=Timeframe.DAILY,
+                 delay=1):
         items = self._meta.lookup(id_=id_, market=market)
         # i.e. for markets 91, 519, 2
         # id duplicates are feasible, looks like corrupt data on finam
@@ -364,37 +316,48 @@ class Exporter(object):
         if end_date is None:
             end_date = datetime.date.today()
 
-        params = {
-            'p': timeframe.value,
-            'em': id_,
-            'market': market.value,
-            'df': start_date.day,
-            'mf': start_date.month - 1,
-            'yf': start_date.year,
-            'dt': end_date.day,
-            'mt': end_date.month - 1,
-            'yt': end_date.year,
-            'cn': code,
-            'code': code,
-            # I would guess this param denotes 'data format'
-            # that differs for ticks only
-            'datf': 6 if timeframe == Timeframe.TICKS.value else 5
-        }
+        df = None
+        chunks = split_interval(start_date, end_date, timeframe.value)
+        counter = 0
+        for chunk_start_date, chunk_end_date in chunks:
+            counter += 1
+            logger.info('Processing chunk %d of %d', counter, len(chunks))
+            if counter > 1:
+                logger.info('Sleeping for {} second(s)'.format(delay))
+                time.sleep(delay)
 
-        url = self._build_url(params)
-        # deliberately not using pd.read_csv's ability to fetch
-        # urls to fully control what's happening
-        data = self._fetcher(url)
-        self._sanity_check(data)
-        if timeframe == Timeframe.TICKS:
-            date_cols = [2, 3]
-        else:
-            date_cols = [0, 1]
+            params = {
+                'p': timeframe.value,
+                'em': id_,
+                'market': market.value,
+                'df': chunk_start_date.day,
+                'mf': chunk_start_date.month - 1,
+                'yf': chunk_start_date.year,
+                'dt': chunk_end_date.day,
+                'mt': chunk_end_date.month - 1,
+                'yt': chunk_end_date.year,
+                'cn': code,
+                'code': code,
+                # I would guess this param denotes 'data format'
+                # that differs for ticks only
+                'datf': 6 if timeframe == Timeframe.TICKS.value else 5
+            }
 
-        try:
-            df = pd.read_csv(StringIO(data), sep=';')
-            df.sort_index(inplace=True)
-        except ParserError as e:
-            raise FinamParsingError(e)
+            url = self._build_url(params)
+            # deliberately not using pd.read_csv's ability to fetch
+            # urls to fully control what's happening
+            data = self._postprocess(self._fetcher(url), timeframe)
+            self._sanity_check(data)
+
+            try:
+                chunk_df = pd.read_csv(StringIO(data), sep=';')
+                chunk_df.sort_index(inplace=True)
+            except ParserError as e:
+                raise FinamParsingError(e)
+
+            if df is None:
+                df = chunk_df
+            else:
+                df = df.append(chunk_df)
 
         return df

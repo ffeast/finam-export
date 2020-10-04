@@ -5,7 +5,7 @@ from functools import partial
 import click
 import pandas as pd
 
-from finam.export import Exporter, Market, FinamObjectNotFoundError
+from finam import Exporter, Market, FinamObjectNotFoundError
 from finam.utils import click_validate_enum
 
 

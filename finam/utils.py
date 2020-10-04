@@ -32,7 +32,7 @@ def build_trusted_request(url):
     Builds a request that won't be rejected by finam's protection
 
     Finam isn't happy to return something for urllib's default
-    user agent hence substituting a custom one
+    user agent hence setting a custom one
     """
     headers = {'User-Agent': FINAM_TRUSTED_USER_AGENT}
     return Request(url, None, headers)

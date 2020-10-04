@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import logging
 
-from finam.export import Exporter, Market
+from finam import Exporter, Market
 
 """
 Simply lists available markets and some samples out of them

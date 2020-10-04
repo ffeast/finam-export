@@ -10,11 +10,11 @@ from functools import partial
 import click
 from click_datetime import Datetime
 
-from finam.export import (Exporter,
-                          Timeframe,
-                          Market,
-                          FinamExportError,
-                          FinamObjectNotFoundError)
+from finam import (Exporter,
+                   Timeframe,
+                   Market,
+                   FinamExportError,
+                   FinamObjectNotFoundError)
 from finam.utils import click_validate_enum
 
 

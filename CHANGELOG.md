@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [x.x.x]
+### Added
+- automatic request split for long intervals (https://github.com/ffeast/finam-export/issues/4)
+### Changed
+- from now on everything needs to be exported from finam package (instead of finam.export and others)
+### Fixed
+- download from time intervals that don't include any trading sessions (i.e. 2018-01-01) is now safe and would result in empty data file instead of an exception
+
 ## [3.0.1] - 2020-09-12
 ### Changed
 - dropped python2.x support as the newest pandas doesn't support it

@@ -1,46 +1,79 @@
-from datetime import timedelta, datetime
+from datetime import datetime, date
 
-from finam.export import Exporter, Market, Timeframe
+from parameterized import parameterized
 
+
+from finam import Exporter, Market, Timeframe
 from . import SBER, SHARES_SESSION_MINUTES
 
 
 class TestIntegration(object):
 
-    def test_basic_but_ticks(self):
+    @parameterized([
+        (date(2015, 1, 1), date(2016, 1, 1), Timeframe.DAILY),
+        (date(2016, 1, 1), date(2018, 1, 1), Timeframe.MINUTES1),
+    ])
+    def test_basic(self, start_date, end_date, timeframe):
         exporter = Exporter()
-        start_date = datetime(2015, 1, 1)
-        end_date = datetime(2016, 1, 1)
+        result = exporter.download(SBER.id, Market.SHARES,
+                                   start_date=start_date,
+                                   end_date=end_date,
+                                   timeframe=timeframe)
+        count = len(result)
+        assert count > 0
+        assert result['<DATE>'].min() >= int(start_date.strftime('%Y%m%d'))
+        assert result['<DATE>'].max() <= int(end_date.strftime('%Y%m%d'))
+        assert result.columns.tolist() == ['<DATE>', '<TIME>',
+                                           '<OPEN>', '<HIGH>',
+                                           '<LOW>', '<CLOSE>', '<VOL>']
 
-        got_daily = exporter.download(SBER.id, Market.SHARES,
-                                      start_date=start_date,
-                                      end_date=end_date,
-                                      timeframe=Timeframe.DAILY)
-        daily_count = len(got_daily)
-        assert daily_count > 0
-
-        got_minutes = exporter.download(SBER.id, Market.SHARES,
-                                        start_date=start_date,
-                                        end_date=end_date,
-                                        timeframe=Timeframe.MINUTES30)
-        minutes30_count = len(got_minutes)
-        assert minutes30_count > daily_count * SHARES_SESSION_MINUTES / 30
-
-        for got in (got_daily, got_minutes):
-            assert got['<DATE>'].min() >= 20150101
-            assert got['<DATE>'].max() <= 20160101
-            assert '<LAST>' not in got.columns
-            assert '<CLOSE>' in got.columns
-
-    def test_ticks(self):
+    @parameterized([
+        (date(2018, 1, 1), date(2018, 1, 1), Timeframe.DAILY),
+    ])
+    def test_blank(self, start_date, end_date, timeframe):
         exporter = Exporter()
-        ticks_date = datetime(2016, 10, 27)
-        got = exporter.download(SBER.id, Market.SHARES,
-                                start_date=ticks_date,
-                                end_date=ticks_date,
-                                timeframe=Timeframe.TICKS)
-        assert len(got) > SHARES_SESSION_MINUTES * 60
-        assert got['<DATE>'].min() >= 20161027
-        assert got['<DATE>'].max() < 20161027 + 1
-        assert '<LAST>' in got.columns
-        assert '<CLOSE>' not in got.columns
+        result = exporter.download(SBER.id, Market.SHARES,
+                                   start_date=start_date,
+                                   end_date=end_date,
+                                   timeframe=timeframe)
+        assert len(result) == 0
+        assert result.columns.tolist() == ['<DATE>', '<TIME>',
+                                           '<OPEN>', '<HIGH>',
+                                           '<LOW>', '<CLOSE>', '<VOL>']
+
+    @parameterized([
+        (date(2016, 10, 27), date(2016, 10, 27)),
+        (date(2020, 9, 7), date(2020, 9, 9)),
+    ])
+    def test_ticks(self, start_date, end_date):
+        exporter = Exporter()
+        result = exporter.download(SBER.id, Market.SHARES,
+                                   start_date=start_date,
+                                   end_date=end_date,
+                                   timeframe=Timeframe.TICKS)
+        assert len(result) > SHARES_SESSION_MINUTES * 60
+        assert result['<DATE>'].min() >= int(start_date.strftime('%Y%m%d'))
+        assert result['<DATE>'].max() <= int(end_date.strftime('%Y%m%d'))
+        assert result.columns.tolist() == ['<TICKER>',
+                                           '<PER>',
+                                           '<DATE>',
+                                           '<TIME>',
+                                           '<LAST>',
+                                           '<VOL>']
+
+    @parameterized([
+        (date(2018, 1, 1), date(2018, 1, 1)),
+    ])
+    def test_ticks_blank(self, start_date, end_date):
+        exporter = Exporter()
+        result = exporter.download(SBER.id, Market.SHARES,
+                                   start_date=start_date,
+                                   end_date=end_date,
+                                   timeframe=Timeframe.TICKS)
+        assert len(result) == 0
+        assert result.columns.tolist() == ['<TICKER>',
+                                           '<PER>',
+                                           '<DATE>',
+                                           '<TIME>',
+                                           '<LAST>',
+                                           '<VOL>']
