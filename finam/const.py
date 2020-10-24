@@ -2,6 +2,7 @@ from enum import IntEnum
 
 __all__ = ['Market',
            'Timeframe',
+           'Fileformat'
            ]
 
 
@@ -40,3 +41,10 @@ class Timeframe(IntEnum):
     DAILY = 8
     WEEKLY = 9
     MONTHLY = 10
+
+class Fileformat(IntEnum):
+
+    CSV = 1
+    CSVGZ = 2
+    PKL = 3
+    PKLXZ = 4
