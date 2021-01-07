@@ -347,7 +347,7 @@ class Exporter(object):
                 'code': code,
                 # I would guess this param denotes 'data format'
                 # that differs for ticks only
-                'datf': 6 if timeframe == Timeframe.TICKS.value else 5
+                'datf': 6 if timeframe == Timeframe.TICKS.value else 5,
                 'fsp': 1 if fill_empty else 0
             }
 
