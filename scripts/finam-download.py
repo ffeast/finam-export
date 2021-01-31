@@ -56,6 +56,9 @@ def _arg_split(ctx, param, value):
               required=True,
               type=click.Path(exists=True, file_okay=False, writable=True,
                               resolve_path=True))
+@click.option('--destfile',
+              help='Destination file name',
+              
 @click.option('--skiperr',
               help='Continue if a download error occurs. False by default',
               required=False,
