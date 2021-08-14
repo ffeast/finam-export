@@ -264,7 +264,7 @@ class Exporter(object):
     ERROR_ALREADY_IN_PROGRESS = u'Система уже обрабатывает Ваш запрос'
 
     def __init__(self, export_host=None, fetcher=fetch_url):
-        self._meta = ExporterMeta(lazy=True)
+        self._meta = ExporterMeta(lazy=True, fetcher=fetcher)
         self._fetcher = fetcher
         if export_host is not None:
             self._export_host = export_host

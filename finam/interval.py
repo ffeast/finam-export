@@ -21,7 +21,7 @@ def split_interval(start_date, end_date, timeframe):
     if end_date < start_date:
         raise ValueError('start_date must be >= end_date, but got {} and {}'
                          .format(start_date, end_date))
-    delta_days = (end_date - start_date).days
+    delta_days = (end_date - start_date).days + 1
     max_days = _MAX_DAYS_PER_TIMEFRAME[timeframe]
     chunks_count, remainder = divmod(delta_days, max_days)
     if remainder != 0:
@@ -29,11 +29,11 @@ def split_interval(start_date, end_date, timeframe):
     if chunks_count <= 1:
         return ((start_date, end_date),)
     chunks = []
-    delta = 0
+    offset_start = timedelta(0)
+    offset_end = timedelta(max_days)
     for chunk_i in range(chunks_count):
-        offset_start = timedelta(chunk_i * max_days + delta)
-        offset_end = timedelta((chunk_i + 1) * max_days)
         chunks.append((start_date + offset_start,
-                      min(start_date + offset_end, end_date)))
-        delta = 1
+                      min(start_date + offset_end - timedelta(1), end_date)))
+        offset_start += timedelta(max_days)
+        offset_end += timedelta(max_days)
     return tuple(chunks)
