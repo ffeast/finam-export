@@ -8,7 +8,6 @@ from urllib.parse import urlencode
 from urllib.request import urlopen
 
 import pandas as pd
-from pandas.io.parsers import ParserError
 
 from .utils import (is_container,
                     smart_decode,
