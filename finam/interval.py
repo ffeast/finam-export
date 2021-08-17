@@ -5,12 +5,12 @@ from .const import Timeframe
 
 _MAX_DAYS_PER_TIMEFRAME = {
     Timeframe.TICKS: 1,
-    Timeframe.MINUTES1: 30 * 5,
-    Timeframe.MINUTES5: 30 * 5,
-    Timeframe.MINUTES10: 30 * 5,
-    Timeframe.MINUTES15: 30 * 5,
-    Timeframe.MINUTES30: 30 * 5,
-    Timeframe.HOURLY: 30 * 5,
+    Timeframe.MINUTES1: 30 * 4,
+    Timeframe.MINUTES5: 30 * 4,
+    Timeframe.MINUTES10: 30 * 4,
+    Timeframe.MINUTES15: 30 * 4,
+    Timeframe.MINUTES30: 30 * 4,
+    Timeframe.HOURLY: 30 * 6,
     Timeframe.DAILY: 365 * 5,
     Timeframe.WEEKLY: 365 * 10,
     Timeframe.MONTHLY: 365 * 10,
