@@ -5,3 +5,5 @@ dist/
 build/
 .eggs/
 finam_export.egg-info/
+.devcontainer
+.vscode
