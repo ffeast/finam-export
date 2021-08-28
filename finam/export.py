@@ -8,7 +8,7 @@ from urllib.parse import urlencode
 from urllib.request import urlopen
 
 import pandas as pd
-from pandas.io.parsers import ParserError
+from pandas.errors import ParserError
 
 from .utils import (is_container,
                     smart_decode,
@@ -309,7 +309,8 @@ class Exporter(object):
                  end_date=None,
                  timeframe=Timeframe.DAILY,
                  delay=1,
-                 max_in_progress_retries=10):
+                 max_in_progress_retries=10,
+                 fill_empty=False):
         items = self._meta.lookup(id_=id_, market=market)
         # i.e. for markets 91, 519, 2
         # id duplicates are feasible, looks like corrupt data on finam
@@ -346,7 +347,8 @@ class Exporter(object):
                 'code': code,
                 # I would guess this param denotes 'data format'
                 # that differs for ticks only
-                'datf': 6 if timeframe == Timeframe.TICKS.value else 5
+                'datf': 6 if timeframe == Timeframe.TICKS.value else 5,
+                'fsp': 1 if fill_empty else 0
             }
 
             url = self._build_url(params)
