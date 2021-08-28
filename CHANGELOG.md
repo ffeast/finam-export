@@ -4,26 +4,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [4.2.0]
+## [4.2.0] - 2021-08-28
 ### Added
 - fill_empty option support in finam.export
 
 ### Changed
 - ParserError import from the right place (pandas.errors)
 
-## [4.1.0]
+## [4.1.0] - 2021-06-14
 ### Changed
 - fetcher passed to ExporterMeta https://github.com/ffeast/finam-export/pull/22
 
-## [4.0.2]
+## [4.0.2] - 2021-02-06
 ### Fixed
 - TICKS data download in some cases might miss some days (https://github.com/ffeast/finam-export/issues/16)
 
-## [4.0.1]
+## [4.0.1] - 2020-10-04
 ### Fixed
 - version in setup.py
 
-## [4.0.0]
+## [4.0.0] - 2020-10-04
 ### Added
 - automatic request split for long intervals (https://github.com/ffeast/finam-export/issues/4)
 ### Changed
