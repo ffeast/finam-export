@@ -26,7 +26,7 @@ class Market(IntEnum):
     SHARES = 1
     SPB = 517
     USA = 25
-    CRYPTO_CURRENCY = 520
+    CRYPTO_CURRENCIES = 520
 
 
 class Timeframe(IntEnum):
