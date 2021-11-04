@@ -381,6 +381,6 @@ class Exporter(object):
             if df is None:
                 df = chunk_df
             else:
-                df = df.append(chunk_df)
+                df = df.append(chunk_df, ignore_index=True)
 
         return df
