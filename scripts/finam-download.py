@@ -14,7 +14,8 @@ from finam import (Exporter,
                    Timeframe,
                    Market,
                    FinamExportError,
-                   FinamObjectNotFoundError)
+                   FinamObjectNotFoundError,
+                   Fileformat)
 from finam.utils import click_validate_enum
 
 
@@ -79,8 +80,13 @@ def _arg_split(ctx, param, value):
 @click.option('--ext',
               help='Resulting file extension',
               default='csv')
+@click.option('--format',
+              help='Format of output file with data',
+              default='CSV',
+              callback=partial(click_validate_enum, Fileformat),
+              required=False)
 def main(contracts, market, timeframe, destdir, lineterm,
-         delay, startdate, enddate, skiperr, ext):
+         delay, startdate, enddate, skiperr, ext, format):
     exporter = Exporter()
 
     if not any((contracts, market)):
@@ -115,10 +121,23 @@ def main(contracts, market, timeframe, destdir, lineterm,
                 continue
             else:
                 raise
-        destpath = os.path.join(destdir, '{}-{}.{}'
-                                .format(contract.code, timeframe, ext))
+        destpath = os.path.join(destdir, '{}-{}'
+                                .format(contract.code, timeframe))
+        
+        # extention is taken from param if output file is in csv format
+        if format == 'CSV':
+            destpath += f'.{ext}'
+            data.to_csv(destpath, index=False, line_terminator=lineterm)
+        elif format == 'CSVGZ':
+            destpath += f'.csv.gz'
+            data.to_csv(destpath, index=False, line_terminator=lineterm, compression='gzip')
+        if format == 'PKL':
+            destpath += f'.pkl'
+            data.to_pickle(destpath)
+        if format == 'PKLXZ':
+            destpath += f'.pkl.xz'
+            data.to_pickle(destpath, compression='xz')
 
-        data.to_csv(destpath, index=False, line_terminator=lineterm)
         if delay > 0:
             logger.info('Sleeping for {} second(s)'.format(delay))
             time.sleep(delay)
