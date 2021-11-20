@@ -257,8 +257,9 @@ class Exporter(object):
     EMPTY_RESULT_NOT_TICKS = '<DATE>;<TIME>;<OPEN>;<HIGH>;<LOW>;<CLOSE>;<VOL>'
     EMPTY_RESULT_TICKS = '<TICKER>;<PER>;<DATE>;<TIME>;<LAST>;<VOL>'
 
-    ERROR_TOO_MUCH_WANTED = (u'Вы запросили данные за слишком '
-                             u'большой временной период')
+    ERROR_TOO_MUCH_WANTED = [(u'Вы запросили данные за слишком '
+                             u'большой временной период'),
+                             "Максимальная глубина данных"]
 
     ERROR_THROTTLING = 'Forbidden: Access is denied'
     ERROR_ALREADY_IN_PROGRESS = u'Система уже обрабатывает Ваш запрос'
@@ -286,7 +287,7 @@ class Exporter(object):
         return data
 
     def _sanity_check(self, data):
-        if self.ERROR_TOO_MUCH_WANTED in data:
+        if any(error in data for error in self.ERROR_TOO_MUCH_WANTED):
             raise FinamTooLongTimeframeError
 
         if self.ERROR_THROTTLING in data:
