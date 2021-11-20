@@ -17,12 +17,13 @@ _MAX_DAYS_PER_TIMEFRAME = {
 }
 
 
-def split_interval(start_date, end_date, timeframe):
+def split_interval(start_date, end_date, timeframe, interval_divider = 1):
     if end_date < start_date:
         raise ValueError('start_date must be >= end_date, but got {} and {}'
                          .format(start_date, end_date))
     delta_days = (end_date - start_date).days + 1
     max_days = _MAX_DAYS_PER_TIMEFRAME[timeframe]
+    max_days = max_days // interval_divider
     chunks_count, remainder = divmod(delta_days, max_days)
     if remainder != 0:
         chunks_count += 1

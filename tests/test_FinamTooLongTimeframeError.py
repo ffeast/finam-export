@@ -1,6 +1,8 @@
 import unittest
-from finam.export import fetch_url, Exporter
+from finam.export import fetch_url, Exporter, Timeframe
 from finam.exception import FinamTooLongTimeframeError
+from finam.const import Market
+from datetime import date
 
 class FinamTooLongTimeframeErrorTestCase(unittest.TestCase):
     def test_tooDeep(self):
@@ -10,3 +12,16 @@ class FinamTooLongTimeframeErrorTestCase(unittest.TestCase):
         export = Exporter()
         with self.assertRaises(FinamTooLongTimeframeError):
             export._sanity_check(data)
+
+    def test_if_divide_then_get_data_when_load_tooLongPeriod(self):
+        date_from = date(2020,1,1)
+        date_till = date(2021,1,2)
+        export = Exporter()
+        export.download(83,Market(5),date_from, date_till,Timeframe.MINUTES15)
+    
+    def test_get_exception_when_load_tooLongPeriod(self):
+        date_from = date(2020,1,1)
+        date_till = date(2021,2,2)
+        export = Exporter()
+        with self.assertRaises(FinamTooLongTimeframeError):
+            export.download(83,Market(5),date_from, date_till,Timeframe.MINUTES15,max_interval_divider=1)
