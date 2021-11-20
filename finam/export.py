@@ -392,6 +392,7 @@ class Exporter(object):
             except FinamTooLongTimeframeError:
                 if interval_divider < max_interval_divider:
                     interval_divider = interval_divider + 1
+                    time.sleep(delay)
                 else:
                     raise
 
