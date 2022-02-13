@@ -257,8 +257,10 @@ class Exporter(object):
     EMPTY_RESULT_NOT_TICKS = '<DATE>;<TIME>;<OPEN>;<HIGH>;<LOW>;<CLOSE>;<VOL>'
     EMPTY_RESULT_TICKS = '<TICKER>;<PER>;<DATE>;<TIME>;<LAST>;<VOL>'
 
-    ERROR_TOO_MUCH_WANTED = (u'Вы запросили данные за слишком '
-                             u'большой временной период')
+    ERROR_TOO_MUCH_WANTED = [(u'вы запросили данные за слишком '
+                             u'большой временной период'),
+                             "максимальная глубина данных",
+                             "делайте несколько запросов"]
 
     ERROR_THROTTLING = 'Forbidden: Access is denied'
     ERROR_ALREADY_IN_PROGRESS = u'Система уже обрабатывает Ваш запрос'
@@ -286,7 +288,7 @@ class Exporter(object):
         return data
 
     def _sanity_check(self, data):
-        if self.ERROR_TOO_MUCH_WANTED in data:
+        if any(error in data.lower() for error in self.ERROR_TOO_MUCH_WANTED):
             raise FinamTooLongTimeframeError
 
         if self.ERROR_THROTTLING in data:
@@ -310,7 +312,8 @@ class Exporter(object):
                  timeframe=Timeframe.DAILY,
                  delay=1,
                  max_in_progress_retries=10,
-                 fill_empty=False):
+                 fill_empty=False,
+                 max_interval_divider = 10):
         items = self._meta.lookup(id_=id_, market=market)
         # i.e. for markets 91, 519, 2
         # id duplicates are feasible, looks like corrupt data on finam
@@ -323,64 +326,74 @@ class Exporter(object):
         if end_date is None:
             end_date = datetime.date.today()
 
-        df = None
-        chunks = split_interval(start_date, end_date, timeframe.value)
-        counter = 0
-        for chunk_start_date, chunk_end_date in chunks:
-            counter += 1
-            logger.info('Processing chunk %d of %d', counter, len(chunks))
-            if counter > 1:
-                logger.info('Sleeping for {} second(s)'.format(delay))
-                time.sleep(delay)
-
-            params = {
-                'p': timeframe.value,
-                'em': id_,
-                'market': market.value,
-                'df': chunk_start_date.day,
-                'mf': chunk_start_date.month - 1,
-                'yf': chunk_start_date.year,
-                'dt': chunk_end_date.day,
-                'mt': chunk_end_date.month - 1,
-                'yt': chunk_end_date.year,
-                'cn': code,
-                'code': code,
-                # I would guess this param denotes 'data format'
-                # that differs for ticks only
-                'datf': 6 if timeframe == Timeframe.TICKS.value else 5,
-                'fsp': 1 if fill_empty else 0
-            }
-
-            url = self._build_url(params)
-            # deliberately not using pd.read_csv's ability to fetch
-            # urls to fully control what's happening
-            retries = 0
-            while True:
-                data = self._fetcher(url)
-                data = self._postprocess(data, timeframe)
-                try:
-                    self._sanity_check(data)
-                except FinamAlreadyInProgressError:
-                    if retries <= max_in_progress_retries:
-                        retries += 1
-                        logger.info('Finam work is in progress, sleeping'
-                                    ' for {} second(s) before retry #{}'
-                                    .format(delay, retries))
-                        time.sleep(delay)
-                        continue
-                    else:
-                        raise
-                break
-
+        interval_divider = 1
+        while True:
+            df = None
+            chunks = split_interval(start_date, end_date, timeframe.value, interval_divider)
+            counter = 0
             try:
-                chunk_df = pd.read_csv(StringIO(data), sep=';')
-                chunk_df.sort_index(inplace=True)
-            except ParserError as e:
-                raise FinamParsingError(e)
+                for chunk_start_date, chunk_end_date in chunks:
+                    counter += 1
+                    logger.info('Processing chunk %d of %d', counter, len(chunks))
+                    if counter > 1:
+                        logger.info('Sleeping for {} second(s)'.format(delay))
+                        time.sleep(delay)
 
-            if df is None:
-                df = chunk_df
-            else:
-                df = df.append(chunk_df)
+                    params = {
+                        'p': timeframe.value,
+                        'em': id_,
+                        'market': market.value,
+                        'df': chunk_start_date.day,
+                        'mf': chunk_start_date.month - 1,
+                        'yf': chunk_start_date.year,
+                        'dt': chunk_end_date.day,
+                        'mt': chunk_end_date.month - 1,
+                        'yt': chunk_end_date.year,
+                        'cn': code,
+                        'code': code,
+                        # I would guess this param denotes 'data format'
+                        # that differs for ticks only
+                        'datf': 6 if timeframe == Timeframe.TICKS.value else 5,
+                        'fsp': 1 if fill_empty else 0
+                    }
 
-        return df
+                    url = self._build_url(params)
+                    # deliberately not using pd.read_csv's ability to fetch
+                    # urls to fully control what's happening
+                    retries = 0
+                    while True:
+                        data = self._fetcher(url)
+                        data = self._postprocess(data, timeframe)
+                        try:
+                            self._sanity_check(data)
+                        except FinamAlreadyInProgressError:
+                            if retries <= max_in_progress_retries:
+                                retries += 1
+                                logger.info('Finam work is in progress, sleeping'
+                                            ' for {} second(s) before retry #{}'
+                                            .format(delay, retries))
+                                time.sleep(delay)
+                                continue
+                            else:
+                                raise
+                        break
+
+                    try:
+                        chunk_df = pd.read_csv(StringIO(data), sep=';')
+                        chunk_df.sort_index(inplace=True)
+                    except ParserError as e:
+                        raise FinamParsingError(e)
+
+                    if df is None:
+                        df = chunk_df
+                    else:
+                        df = df.append(chunk_df)
+
+                return df
+            except FinamTooLongTimeframeError:
+                if interval_divider < max_interval_divider:
+                    interval_divider = interval_divider * 2
+                    time.sleep(delay)
+                else:
+                    raise
+
