@@ -1,15 +1,16 @@
+import unittest
 from datetime import datetime, date
 
 from parameterized import parameterized
 
 
 from finam import Exporter, Market, Timeframe
-from . import SBER, SHARES_SESSION_MINUTES
+from fixtures import SBER, SHARES_SESSION_MINUTES
 
 
-class TestIntegration(object):
+class TestIntegration(unittest.TestCase):
 
-    @parameterized([
+    @parameterized.expand([
         (date(2015, 1, 1), date(2016, 1, 1), Timeframe.DAILY),
         (date(2016, 1, 1), date(2018, 1, 1), Timeframe.MINUTES1),
     ])
@@ -27,7 +28,7 @@ class TestIntegration(object):
                                            '<OPEN>', '<HIGH>',
                                            '<LOW>', '<CLOSE>', '<VOL>']
 
-    @parameterized([
+    @parameterized.expand([
         (date(2018, 1, 1), date(2018, 1, 1), Timeframe.DAILY),
     ])
     def test_blank(self, start_date, end_date, timeframe):
@@ -41,7 +42,7 @@ class TestIntegration(object):
                                            '<OPEN>', '<HIGH>',
                                            '<LOW>', '<CLOSE>', '<VOL>']
 
-    @parameterized([
+    @parameterized.expand([
         (date(2016, 10, 27), date(2016, 10, 27)),
         (date(2020, 9, 7), date(2020, 9, 9)),
     ])
@@ -61,7 +62,7 @@ class TestIntegration(object):
                                            '<LAST>',
                                            '<VOL>']
 
-    @parameterized([
+    @parameterized.expand([
         (date(2018, 1, 1), date(2018, 1, 1)),
     ])
     def test_ticks_blank(self, start_date, end_date):
