@@ -1,30 +1,29 @@
-import time
 import datetime
 import logging
 import operator
+import time
 from enum import IntEnum
 from io import StringIO
+from typing import Type, Union
 from urllib.parse import urlencode
 from urllib.request import urlopen
 
 import pandas as pd
 from pandas.errors import ParserError
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.webdriver import WebDriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from webdriver_manager.chrome import ChromeDriverManager
 
-from .utils import (is_container,
-                    smart_decode,
-                    build_trusted_request,
-                    parse_script_link)
 from .const import Timeframe
-from .exception import (FinamDownloadError,
-                        FinamParsingError,
-                        FinamObjectNotFoundError,
-                        FinamTooLongTimeframeError,
-                        FinamAlreadyInProgressError,
-                        FinamThrottlingError)
-
-
+from .exception import (FinamAlreadyInProgressError, FinamDownloadError,
+                        FinamObjectNotFoundError, FinamParsingError,
+                        FinamThrottlingError, FinamTooLongTimeframeError)
 from .interval import split_interval
-
+from .utils import (build_trusted_request, is_container, parse_script_link,
+                    smart_decode)
 
 __all__ = ['Exporter', 'LookupComparator']
 
@@ -39,9 +38,10 @@ class LookupComparator(IntEnum):
     CONTAINS = 3
 
 
-def fetch_url(url, lines=False):
+def fetch_url_urllib(url, lines=False):
     """
     Fetches url from finam.ru
+    Since January 2023 this fetcher does not support fetching meta data
     """
     logger.info('Fetching {}'.format(url))
     request = build_trusted_request(url)
@@ -59,13 +59,97 @@ def fetch_url(url, lines=False):
         raise FinamDownloadError('Unable to decode: {}'.format(e.message))
 
 
+def fetch_url_webdriver(url, lines=False) -> str:
+    """
+    Fetches url from finam.ru
+    Selenium webdriver based method for meta data fetching
+    """
+    logger.info('Fetching {}'.format(url))
+    locator = (By.XPATH, "//*")
+    with FetchMetaWebriver() as fetcher:
+        fetcher.driver.get(url)
+        res = fetcher.wait.until(
+            lambda driver: driver.find_element(*locator).get_attribute('outerHTML')
+        )
+        if lines:
+            res = res.encode('cp1252').decode('cp1251')
+            res = res.split('\n')
+            return res
+        return res
+
+
+def use_fetcher_meta(cls: Type) -> Type:
+    """
+    It is class decorator.
+    Use it to decorate all classes that should use webdriver for fetching
+    """
+    FetchMetaWebriver.pages_to_load += 1
+    return cls
+
+
+class FetchMetaWebriver:
+    """
+    This class provides a method for fetching meta data from the finam.ru website
+    The method is based on the Selenium webdriver and uses a cached webdriver stored as a class attribute driver
+    This caching saves around 1-2 seconds of loading time
+    The number of pages to download is dynamically calculated using a class decorator and stored in the pages_to_load attribute
+    The webdriver is automatically closed when all pages have been downloaded
+    """
+
+    driver: Union[WebDriver, None] = None
+    pages_to_load = 0
+    timeout = 30
+    wait: WebDriverWait
+
+    def __enter__(self):
+        """
+        Setup chrome driver with webdriver service
+        NB:
+        Using headless mode is not allowed by finam
+        If you are going to use this lib inside docker container you have to use virtual screen, e.g. xvfb
+        """
+        logger.info('Meta data fetching started')
+        self.__class__.pages_to_load -= 1
+        if self.__class__.driver:
+            return self
+        chromeService = Service(ChromeDriverManager().install())
+        options = webdriver.ChromeOptions()
+        # Basic driver`s options
+        options.add_argument('--disable-translate')
+        options.add_argument('--disable-extensions')
+        options.add_argument('--disable-notifications')
+        # The following options is mandatory if you are going to run it in docker container
+        options.add_argument('--no-sandbox')
+        options.add_argument("--disable-gpu")
+        options.add_argument("--disable-dev-shm-usage")
+        # Disable images and css loading
+        prefs = {
+            "profile.managed_default_content_settings.images": 2,
+            "profile.managed_default_content_settings.stylesheets": 2,
+        }
+        options.add_experimental_option("prefs", prefs)
+        # Setup driver and cache it inside the class
+        self.__class__.driver = webdriver.Chrome(service=chromeService, options=options)
+        self.__class__.wait = WebDriverWait(self.__class__.driver, self.__class__.timeout)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if any((exc_type, exc_val, exc_tb)):
+            self.driver.quit()
+            logger.info(f'Meta data fetching failed. {exc_type}): {exc_val}')
+        if self.__class__.pages_to_load == 0:
+            self.driver.quit()
+            logger.info('Meta data fetching finished')
+ 
+
+@use_fetcher_meta
 class ExporterMetaPage(object):
 
     FINAM_BASE = 'https://www.finam.ru'
     FINAM_ENTRY_URL = FINAM_BASE + '/profile/moex-akcii/gazprom/export/'
     FINAM_META_FILENAME = 'icharts.js'
 
-    def __init__(self, fetcher=fetch_url):
+    def __init__(self, fetcher=fetch_url_urllib):
         self._fetcher = fetcher
 
     def find_meta_file(self):
@@ -83,16 +167,16 @@ class ExporterMetaPage(object):
         try:
             url = parse_script_link(html, self.FINAM_META_FILENAME)
         except ValueError as e:
-            raise FinamParsingError('Unable to parse meta url from html: {}'
-                                    .format(e))
+            raise FinamParsingError('Unable to parse meta url from html: {}'.format(e))
         return self.FINAM_BASE + url
 
 
+@use_fetcher_meta
 class ExporterMetaFile(object):
 
     FINAM_CATEGORIES = -1
 
-    def __init__(self, url, fetcher=fetch_url):
+    def __init__(self, url, fetcher=fetch_url_urllib):
         self._url = url
         self._fetcher = fetcher
 
@@ -112,10 +196,9 @@ class ExporterMetaFile(object):
         start_char, end_char = '[', ']'
         start_idx = line.find(start_char)
         end_idx = line.find(end_char)
-        if (start_idx == -1 or
-                end_idx == -1):
+        if start_idx == -1 or end_idx == -1:
             raise FinamDownloadError('Unable to parse line: {}'.format(line))
-        items = line[start_idx + 1:end_idx]
+        items = line[start_idx + 1 : end_idx]
 
         # string items
         if items.startswith("'"):
@@ -135,7 +218,7 @@ class ExporterMetaFile(object):
         """
         cols = ('id', 'name', 'code', 'market')
         parsed = dict()
-        for idx, col in enumerate(cols[:len(cols)]):
+        for idx, col in enumerate(cols[: len(cols)]):
             parsed[col] = self._parse_js_assignment(data[idx])
         df = pd.DataFrame(columns=cols, data=parsed)
         df['market'] = df['market'].astype(int)
@@ -153,8 +236,7 @@ class ExporterMetaFile(object):
 
 
 class ExporterMeta(object):
-
-    def __init__(self, lazy=True, fetcher=fetch_url):
+    def __init__(self, lazy=True, fetcher=fetch_url_urllib):
         self._meta = None
         self._fetcher = fetcher
         if not lazy:
@@ -192,8 +274,7 @@ class ExporterMeta(object):
                 op = 'startswith'
             else:
                 op = 'contains'
-            expr = self._combine_filters(
-                map(getattr(self._meta[col].str, op), val), operator.or_)
+            expr = self._combine_filters(map(getattr(self._meta[col].str, op), val), operator.or_)
         return expr
 
     def _combine_filters(self, filters, op):
@@ -203,9 +284,15 @@ class ExporterMeta(object):
             result = op(result, filter_)
         return result
 
-    def lookup(self, id_=None, code=None, name=None, market=None,
-               name_comparator=LookupComparator.CONTAINS,
-               code_comparator=LookupComparator.EQUALS):
+    def lookup(
+        self,
+        id_=None,
+        code=None,
+        name=None,
+        market=None,
+        name_comparator=LookupComparator.CONTAINS,
+        code_comparator=LookupComparator.EQUALS,
+    ):
         """
         Looks up contracts matching specified combinations of requirements
         If multiple requirements are specified they will be ANDed
@@ -214,17 +301,18 @@ class ExporterMeta(object):
         may appear in different markets
         """
         if not any((id_, code, name, market)):
-            raise ValueError('Either id or code or name or market'
-                             ' must be specified')
+            raise ValueError('Either id or code or name or market' ' must be specified')
 
         self._load()
         filters = []
 
         # applying filters
-        filter_groups = (('id', id_, LookupComparator.EQUALS),
-                         ('code', code, code_comparator),
-                         ('name', name, name_comparator),
-                         ('market', market, LookupComparator.EQUALS))
+        filter_groups = (
+            ('id', id_, LookupComparator.EQUALS),
+            ('code', code, code_comparator),
+            ('name', name, name_comparator),
+            ('market', market, LookupComparator.EQUALS),
+        )
 
         for col, val, comparator in filter_groups:
             if val is not None:
@@ -251,20 +339,21 @@ class Exporter(object):
         'mstimever': '1',
         'sep': '3',
         'sep2': '1',
-        'at': '1'
+        'at': '1',
     }
 
     EMPTY_RESULT_NOT_TICKS = '<DATE>;<TIME>;<OPEN>;<HIGH>;<LOW>;<CLOSE>;<VOL>'
     EMPTY_RESULT_TICKS = '<TICKER>;<PER>;<DATE>;<TIME>;<LAST>;<VOL>'
 
-    ERROR_TOO_MUCH_WANTED = (u'Вы запросили данные за слишком '
-                             u'большой временной период')
+    ERROR_TOO_MUCH_WANTED = u'Вы запросили данные за слишком ' u'большой временной период'
 
     ERROR_THROTTLING = 'Forbidden: Access is denied'
     ERROR_ALREADY_IN_PROGRESS = u'Система уже обрабатывает Ваш запрос'
 
-    def __init__(self, export_host=None, fetcher=fetch_url):
-        self._meta = ExporterMeta(lazy=True, fetcher=fetcher)
+    def __init__(
+        self, export_host=None, fetcher=fetch_url_urllib, fetcher_meta=fetch_url_webdriver
+    ):
+        self._meta = ExporterMeta(lazy=True, fetcher=fetcher_meta)
         self._fetcher = fetcher
         if export_host is not None:
             self._export_host = export_host
@@ -272,10 +361,9 @@ class Exporter(object):
             self._export_host = self.DEFAULT_EXPORT_HOST
 
     def _build_url(self, params):
-        url = ('http://{}/table.csv?{}&{}'
-               .format(self._export_host,
-                       urlencode(self.IMMUTABLE_PARAMS),
-                       urlencode(params)))
+        url = 'http://{}/table.csv?{}&{}'.format(
+            self._export_host, urlencode(self.IMMUTABLE_PARAMS), urlencode(params)
+        )
         return url
 
     def _postprocess(self, data, timeframe):
@@ -296,28 +384,30 @@ class Exporter(object):
             raise FinamAlreadyInProgressError
 
         if not all(c in data for c in '<>;'):
-            raise FinamParsingError('Returned data doesnt seem like '
-                                    'a valid csv dataset: {}'.format(data))
+            raise FinamParsingError(
+                'Returned data doesnt seem like ' 'a valid csv dataset: {}'.format(data)
+            )
 
     def lookup(self, *args, **kwargs):
         return self._meta.lookup(*args, **kwargs)
 
-    def download(self,
-                 id_,
-                 market,
-                 start_date=datetime.date(2007, 1, 1),
-                 end_date=None,
-                 timeframe=Timeframe.DAILY,
-                 delay=1,
-                 max_in_progress_retries=10,
-                 fill_empty=False):
+    def download(
+        self,
+        id_,
+        market,
+        start_date=datetime.date(2007, 1, 1),
+        end_date=None,
+        timeframe=Timeframe.DAILY,
+        delay=1,
+        max_in_progress_retries=10,
+        fill_empty=False,
+    ):
         items = self._meta.lookup(id_=id_, market=market)
         # i.e. for markets 91, 519, 2
         # id duplicates are feasible, looks like corrupt data on finam
         # can do nothing about it but inform the user
         if len(items) != 1:
-            raise FinamDownloadError('Duplicate items for id={} on market {}'
-                                     .format(id_, market))
+            raise FinamDownloadError('Duplicate items for id={} on market {}'.format(id_, market))
         code = items.iloc[0]['code']
 
         if end_date is None:
@@ -348,7 +438,7 @@ class Exporter(object):
                 # I would guess this param denotes 'data format'
                 # that differs for ticks only
                 'datf': 6 if timeframe == Timeframe.TICKS.value else 5,
-                'fsp': 1 if fill_empty else 0
+                'fsp': 1 if fill_empty else 0,
             }
 
             url = self._build_url(params)
@@ -363,9 +453,10 @@ class Exporter(object):
                 except FinamAlreadyInProgressError:
                     if retries <= max_in_progress_retries:
                         retries += 1
-                        logger.info('Finam work is in progress, sleeping'
-                                    ' for {} second(s) before retry #{}'
-                                    .format(delay, retries))
+                        logger.info(
+                            'Finam work is in progress, sleeping'
+                            ' for {} second(s) before retry #{}'.format(delay, retries)
+                        )
                         time.sleep(delay)
                         continue
                     else:
