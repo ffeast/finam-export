@@ -11,6 +11,9 @@ Python client library to download data from finam.ru
 ## Installation
 * `pip install finam-export`
 
+## Requierements
+* Google Chrome must be installed
+
 ## Samples provided
 * `samples/listing.py` - simply lists some contracts from every supported market
 * `samples/download.py` - downloads some data and prints it out
@@ -25,14 +28,24 @@ Here's the output
 ```
 *** Current Russian ruble exchange rates ***
 INFO:finam.export:Fetching https://www.finam.ru/profile/moex-akcii/gazprom/export/
+INFO:finam.export:Meta data fetching started
 INFO:finam.export:Fetching https://www.finam.ru/cache/N72Hgd54/icharts/icharts.js
-INFO:finam.export:Fetching http://export.finam.ru/table.csv?d=d&f=table&e=.csv&dtf=1&tmf=3&MSOR=0&mstime=on&mstimever=1&sep=3&sep2=1&at=1&p=8&em=182456&market=45&df=1&mf=0&yf=2007&dt=12&mt=8&yt=2020&cn=USD000000TOD&code=USD000000TOD&datf=5
-        <DATE>    <TIME>  <OPEN>  <HIGH>  <LOW>  <CLOSE>      <VOL>
-2163  20200911  00:00:00   75.19   75.19  74.72    74.95  765709000
+INFO:finam.export:Meta data fetching finished
+INFO:finam.export:Processing chunk 1 of 2
+INFO:finam.export:Fetching http://export.finam.ru/table.csv?d=d&f=table&e=.csv&dtf=1&tmf=3&MSOR=0&mstime=on&mstimever=1&sep=3&sep2=1&at=1&p=8&em=182456&market=45&df=1&mf=0&yf=2007&dt=28&mt=11&yt=2016&cn=USD000000TOD&code=USD000000TOD&datf=5&fsp=0
+INFO:finam.export:Processing chunk 2 of 2
+INFO:finam.export:Sleeping for 1 second(s)
+INFO:finam.export:Fetching http://export.finam.ru/table.csv?d=d&f=table&e=.csv&dtf=1&tmf=3&MSOR=0&mstime=on&mstimever=1&sep=3&sep2=1&at=1&p=8&em=182456&market=45&df=29&mf=11&yf=2016&dt=26&mt=2&yt=2023&cn=USD000000TOD&code=USD000000TOD&datf=5&fsp=0
+        <DATE>    <TIME>  <OPEN>  <HIGH>    <LOW>  <CLOSE>      <VOL>
+1473  20230324  00:00:00  76.175    76.8  76.0025   76.695  460424000
 *** Current Brent Oil price ***
-INFO:finam.export:Fetching http://export.finam.ru/table.csv?d=d&f=table&e=.csv&dtf=1&tmf=3&MSOR=0&mstime=on&mstimever=1&sep=3&sep2=1&at=1&p=8&em=19473&market=24&df=1&mf=0&yf=2007&dt=12&mt=8&yt=2020&cn=BZ&code=BZ&datf=5
-        <DATE>    <TIME>  <OPEN>  <HIGH>  <LOW>  <CLOSE>   <VOL>
-4206  20200911  00:00:00   39.96   40.34  39.38    39.92  114897
+INFO:finam.export:Processing chunk 1 of 2
+INFO:finam.export:Fetching http://export.finam.ru/table.csv?d=d&f=table&e=.csv&dtf=1&tmf=3&MSOR=0&mstime=on&mstimever=1&sep=3&sep2=1&at=1&p=8&em=19473&market=24&df=1&mf=0&yf=2007&dt=28&mt=11&yt=2016&cn=BZ&code=BZ&datf=5&fsp=0
+INFO:finam.export:Processing chunk 2 of 2
+INFO:finam.export:Sleeping for 1 second(s)
+INFO:finam.export:Fetching http://export.finam.ru/table.csv?d=d&f=table&e=.csv&dtf=1&tmf=3&MSOR=0&mstime=on&mstimever=1&sep=3&sep2=1&at=1&p=8&em=19473&market=24&df=29&mf=11&yf=2016&dt=26&mt=2&yt=2023&cn=BZ&code=BZ&datf=5&fsp=0
+        <DATE>    <TIME>  <OPEN>  <HIGH>  <LOW>  <CLOSE>  <VOL>
+1934  20230324  00:00:00   75.53   76.32  72.68     75.0  92082
 ```
 and here's the code producing this output:
 ```
@@ -75,7 +88,7 @@ PYTHONPATH=. ./samples/listing.py
 ## Technical details
 * Targeted to Linux/Mac
 * Uses pandas inside, all data returned is pandas DataFrames
-* Tested with python3.7+
+* Tested with python 3.7, python 3.8, python 3.9, python 3.10, python 3.11
 * Good tests coverage
 * Detailed logging of what's going on
 
@@ -86,3 +99,6 @@ PYTHONPATH=. ./samples/listing.py
 * `nosetests`
 * go ahead and enhance it!
 * don't forget to cover your changes with tests
+
+## More info
+* Check Dockerfile in the root folder if you are looking for docker-based example

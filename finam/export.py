@@ -83,7 +83,7 @@ def use_fetcher_meta(cls: Type) -> Type:
     It is class decorator.
     Use it to decorate all classes that should use webdriver for fetching
     """
-    FetchMetaWebriver.pages_to_load += 1
+    FetchMetaWebriver.pages_to_load_max += 1
     return cls
 
 
@@ -92,12 +92,14 @@ class FetchMetaWebriver:
     This class provides a method for fetching meta data from the finam.ru website
     The method is based on the Selenium webdriver and uses a cached webdriver stored as a class attribute driver
     This caching saves around 1-2 seconds of loading time
-    The number of pages to download is dynamically calculated using a class decorator and stored in the pages_to_load attribute
+    The number of pages to download is dynamically calculated using a class decorator and stored in the pages_to_load_max attribute
+    Attribute pages_to_load is used to support multiple Exporter instances
     The webdriver is automatically closed when all pages have been downloaded
     """
 
     driver: Union[WebDriver, None] = None
-    pages_to_load = 0
+    pages_to_load_max = 0
+    pages_to_load_cur = {}
     timeout = 30
     wait: WebDriverWait
 
@@ -108,11 +110,11 @@ class FetchMetaWebriver:
         Using headless mode is not allowed by finam
         If you are going to use this lib inside docker container you have to use virtual screen, e.g. xvfb
         """
-        logger.info('Meta data fetching started')
-        self.__class__.pages_to_load -= 1
-        if self.__class__.driver:
+        cls = self.__class__
+        if cls.driver and cls.pages_to_load_cur[id(cls.driver)] > 0:
             return self
-        chromeService = Service(ChromeDriverManager().install())
+        logger.info(f'Meta data fetching started')
+        chromeService = Service(ChromeDriverManager(log_level=logging.WARNING).install())
         options = webdriver.ChromeOptions()
         # Basic driver`s options
         options.add_argument('--disable-translate')
@@ -129,15 +131,18 @@ class FetchMetaWebriver:
         }
         options.add_experimental_option("prefs", prefs)
         # Setup driver and cache it inside the class
-        self.__class__.driver = webdriver.Chrome(service=chromeService, options=options)
-        self.__class__.wait = WebDriverWait(self.__class__.driver, self.__class__.timeout)
+        cls.driver = webdriver.Chrome(service=chromeService, options=options)
+        cls.wait = WebDriverWait(cls.driver, cls.timeout)
+        cls.pages_to_load_cur[id(self.driver)] = cls.pages_to_load_max
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        cls = self.__class__
+        cls.pages_to_load_cur[id(self.driver)] -= 1
         if any((exc_type, exc_val, exc_tb)):
             self.driver.quit()
             logger.info(f'Meta data fetching failed. {exc_type}): {exc_val}')
-        if self.__class__.pages_to_load == 0:
+        if cls.pages_to_load_cur[id(self.driver)] == 0:
             self.driver.quit()
             logger.info('Meta data fetching finished')
  
@@ -252,7 +257,10 @@ class ExporterMeta(object):
 
     @property
     def meta(self):
-        return self._meta.copy(deep=True)
+        try:
+            return self._meta.copy(deep=True)
+        except AttributeError:
+            return None
 
     def _apply_filter(self, col, val, comparator):
         """
@@ -472,6 +480,6 @@ class Exporter(object):
             if df is None:
                 df = chunk_df
             else:
-                df = df.append(chunk_df)
+                df = pd.concat((df, chunk_df))
 
         return df
