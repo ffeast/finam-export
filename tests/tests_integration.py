@@ -1,21 +1,24 @@
-from datetime import datetime, date
+import unittest
+from datetime import date
 
 from parameterized import parameterized
 
 
 from finam import Exporter, Market, Timeframe
-from . import SBER, SHARES_SESSION_MINUTES
+from fixtures import SBER, SHARES_SESSION_MINUTES
 
 
-class TestIntegration(object):
+class TestIntegration(unittest.TestCase):
 
-    @parameterized([
+    def setUp(self) -> None:
+        self.exporter = Exporter()
+
+    @parameterized.expand([
         (date(2015, 1, 1), date(2016, 1, 1), Timeframe.DAILY),
         (date(2016, 1, 1), date(2018, 1, 1), Timeframe.MINUTES1),
     ])
     def test_basic(self, start_date, end_date, timeframe):
-        exporter = Exporter()
-        result = exporter.download(SBER.id, Market.SHARES,
+        result = self.exporter.download(SBER.id, Market.SHARES,
                                    start_date=start_date,
                                    end_date=end_date,
                                    timeframe=timeframe)
@@ -27,12 +30,11 @@ class TestIntegration(object):
                                            '<OPEN>', '<HIGH>',
                                            '<LOW>', '<CLOSE>', '<VOL>']
 
-    @parameterized([
+    @parameterized.expand([
         (date(2018, 1, 1), date(2018, 1, 1), Timeframe.DAILY),
     ])
     def test_blank(self, start_date, end_date, timeframe):
-        exporter = Exporter()
-        result = exporter.download(SBER.id, Market.SHARES,
+        result = self.exporter.download(SBER.id, Market.SHARES,
                                    start_date=start_date,
                                    end_date=end_date,
                                    timeframe=timeframe)
@@ -41,13 +43,12 @@ class TestIntegration(object):
                                            '<OPEN>', '<HIGH>',
                                            '<LOW>', '<CLOSE>', '<VOL>']
 
-    @parameterized([
+    @parameterized.expand([
         (date(2016, 10, 27), date(2016, 10, 27)),
         (date(2020, 9, 7), date(2020, 9, 9)),
     ])
     def test_ticks(self, start_date, end_date):
-        exporter = Exporter()
-        result = exporter.download(SBER.id, Market.SHARES,
+        result = self.exporter.download(SBER.id, Market.SHARES,
                                    start_date=start_date,
                                    end_date=end_date,
                                    timeframe=Timeframe.TICKS)
@@ -61,12 +62,11 @@ class TestIntegration(object):
                                            '<LAST>',
                                            '<VOL>']
 
-    @parameterized([
+    @parameterized.expand([
         (date(2018, 1, 1), date(2018, 1, 1)),
     ])
     def test_ticks_blank(self, start_date, end_date):
-        exporter = Exporter()
-        result = exporter.download(SBER.id, Market.SHARES,
+        result = self.exporter.download(SBER.id, Market.SHARES,
                                    start_date=start_date,
                                    end_date=end_date,
                                    timeframe=Timeframe.TICKS)

@@ -7,3 +7,4 @@ build/
 finam_export.egg-info/
 .devcontainer
 .vscode
+.venv

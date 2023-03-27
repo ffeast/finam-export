@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.1.2] - 2023-03-26
+### Added
+- Added new fetcher which use selenium webdriver to download meta data
+### Changed
+- Implement unittest module from standart library for tests
+
 ## [5.1.1] - 2021-11-04
 ### Fixed
 - renamed CRYPTO_CURRENCY -> CRYPTO_CURRENCIES for the sake of consistency

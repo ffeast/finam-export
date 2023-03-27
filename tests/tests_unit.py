@@ -1,9 +1,9 @@
 import operator
+import unittest
+import unittest.mock as mock
 from datetime import date
 
-import mock
 import pandas as pd
-from nose.tools import assert_raises, assert_raises_regexp
 from parameterized import parameterized
 
 from finam import (Market,
@@ -17,10 +17,10 @@ from finam.export import (ExporterMeta,
                           ExporterMetaFile)
 from finam.interval import split_interval
 
-from . import fixtures, startswith_compat, SBER, MICEX
+from fixtures import fixtures, startswith_compat, SBER, MICEX
 
 
-class TestExporterMetaPage(object):
+class TestExporterMetaPage(unittest.TestCase):
 
     def test_find_ok(self):
         fetcher = mock.MagicMock(return_value=fixtures.page_valid)
@@ -30,11 +30,11 @@ class TestExporterMetaPage(object):
 
     def test_find_on_broken_page(self):
         fetcher = mock.MagicMock(return_value=fixtures.page_broken)
-        with assert_raises(FinamParsingError):
+        with self.assertRaises(FinamParsingError):
             ExporterMetaPage(fetcher).find_meta_file()
 
 
-class TestExporterMetaFile(object):
+class TestExporterMetaFile(unittest.TestCase):
 
     def test_parse_df_ok(self):
         fetcher = mock.MagicMock(return_value=fixtures.meta_valid__split)
@@ -55,14 +55,14 @@ class TestExporterMetaFile(object):
         for fixture in (fixtures.meta_malformed__split,
                         fixtures.meta_blank__split):
             fetcher = mock.MagicMock(return_value=fixture)
-            meta_file = ExporterMetaFile('https://exampe.com', fetcher)
-            with assert_raises(FinamDownloadError):
+            meta_file = ExporterMetaFile('https://example.com', fetcher)
+            with self.assertRaises(FinamDownloadError):
                 meta_file.parse_df()
 
 
-class TestExporterMeta(object):
+class TestExporterMeta(unittest.TestCase):
 
-    def setup(self):
+    def setUp(self):
         with mock.patch('finam.export.ExporterMetaPage'):
             fetcher = mock.MagicMock(return_value=fixtures.meta_valid__split)
             self._meta = ExporterMeta(lazy=False, fetcher=fetcher)
@@ -85,7 +85,7 @@ class TestExporterMeta(object):
 
     def test_lookup_by_missing_id(self):
         MISSING_ID = self._meta.meta.index.values.max() + 1
-        with assert_raises(FinamObjectNotFoundError):
+        with self.assertRaises(FinamObjectNotFoundError):
             self._meta.lookup(id_=MISSING_ID)
 
     def test_lookup_name_code_by_comparators(self):
@@ -119,41 +119,42 @@ class TestExporterMeta(object):
         assert set(actual['market']) == {Market.SHARES}
 
 
-@parameterized([
-    (date(2016, 1, 1), date(2020, 1, 30), Timeframe.DAILY,
-     ((date(2016, 1, 1), date(2020, 1, 30)),)),
-    (date(2016, 1, 1), date(2016, 1, 1), Timeframe.MINUTES1,
-     ((date(2016, 1, 1), date(2016, 1, 1)),)),
-    (date(2016, 1, 1), date(2016, 1, 2), Timeframe.MINUTES1,
-     ((date(2016, 1, 1), date(2016, 1, 2)),)),
-    (date(2018, 1, 1), date(2020, 9, 15), Timeframe.MINUTES1,
-     ((date(2018, 1, 1), date(2018, 12, 31)),
-      (date(2019, 1, 1), date(2019, 12, 31)),
-      (date(2020, 1, 1), date(2020, 9, 15)),)),
-    (date(2019, 3, 1), date(2020, 3, 1), Timeframe.MINUTES1,
-     ((date(2019, 3, 1), date(2020, 2, 28)),
-      (date(2020, 2, 29), date(2020, 3, 1)),)),
-    (date(2018, 3, 1), date(2019, 3, 1), Timeframe.MINUTES1,
-     ((date(2018, 3, 1), date(2019, 2, 28)),
-      (date(2019, 3, 1), date(2019, 3, 1)),)),
-    (date(2019, 3, 1), date(2020, 2, 29), Timeframe.MINUTES1,
-     ((date(2019, 3, 1), date(2020, 2, 28)),
-      (date(2020, 2, 29), date(2020, 2, 29)),)),
-    (date(2016, 1, 1), date(2016, 1, 1), Timeframe.TICKS,
-     ((date(2016, 1, 1), date(2016, 1, 1)),)),
-    (date(2020, 2, 29), date(2020, 3, 1), Timeframe.TICKS,
-     ((date(2020, 2, 29), date(2020, 2, 29)),
-      (date(2020, 3, 1), date(2020, 3, 1)),)),
-    (date(2020, 1, 30), date(2020, 2, 1), Timeframe.TICKS,
-     ((date(2020, 1, 30), date(2020, 1, 30)),
-      (date(2020, 1, 31), date(2020, 1, 31)),
-      (date(2020, 2, 1), date(2020, 2, 1)),)),
-])
-def test_split_interval(start_date, end_date, interval, expected):
-    actual = split_interval(start_date, end_date, interval)
-    assert expected == actual
+class TestInterval(unittest.TestCase):
+    @parameterized.expand([
+        (date(2016, 1, 1), date(2020, 1, 30), Timeframe.DAILY,
+        ((date(2016, 1, 1), date(2020, 1, 30)),)),
+        (date(2016, 1, 1), date(2016, 1, 1), Timeframe.MINUTES1,
+        ((date(2016, 1, 1), date(2016, 1, 1)),)),
+        (date(2016, 1, 1), date(2016, 1, 2), Timeframe.MINUTES1,
+        ((date(2016, 1, 1), date(2016, 1, 2)),)),
+        (date(2018, 1, 1), date(2020, 9, 15), Timeframe.MINUTES1,
+        ((date(2018, 1, 1), date(2018, 12, 31)),
+        (date(2019, 1, 1), date(2019, 12, 31)),
+        (date(2020, 1, 1), date(2020, 9, 15)),)),
+        (date(2019, 3, 1), date(2020, 3, 1), Timeframe.MINUTES1,
+        ((date(2019, 3, 1), date(2020, 2, 28)),
+        (date(2020, 2, 29), date(2020, 3, 1)),)),
+        (date(2018, 3, 1), date(2019, 3, 1), Timeframe.MINUTES1,
+        ((date(2018, 3, 1), date(2019, 2, 28)),
+        (date(2019, 3, 1), date(2019, 3, 1)),)),
+        (date(2019, 3, 1), date(2020, 2, 29), Timeframe.MINUTES1,
+        ((date(2019, 3, 1), date(2020, 2, 28)),
+        (date(2020, 2, 29), date(2020, 2, 29)),)),
+        (date(2016, 1, 1), date(2016, 1, 1), Timeframe.TICKS,
+        ((date(2016, 1, 1), date(2016, 1, 1)),)),
+        (date(2020, 2, 29), date(2020, 3, 1), Timeframe.TICKS,
+        ((date(2020, 2, 29), date(2020, 2, 29)),
+        (date(2020, 3, 1), date(2020, 3, 1)),)),
+        (date(2020, 1, 30), date(2020, 2, 1), Timeframe.TICKS,
+        ((date(2020, 1, 30), date(2020, 1, 30)),
+        (date(2020, 1, 31), date(2020, 1, 31)),
+        (date(2020, 2, 1), date(2020, 2, 1)),)),
+    ])
+    def test_split_interval(self, start_date, end_date, interval, expected):
+        actual = split_interval(start_date, end_date, interval)
+        assert expected == actual
 
 
-def test_split_interval_validation():
-    with assert_raises_regexp(ValueError, 'start_date must be'):
-        split_interval(date(2020, 1, 1), date(2010, 1, 1), Timeframe.DAILY)
+    def test_split_interval_validation(self):
+        with self.assertRaisesRegex(ValueError, 'start_date must be'):
+            split_interval(date(2020, 1, 1), date(2010, 1, 1), Timeframe.DAILY)
